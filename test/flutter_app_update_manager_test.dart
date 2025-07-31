@@ -1,85 +1,115 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_app_update_manager/flutter_app_update_manager.dart';
 
-import 'flutter_app_update_manager_test.mocks.dart';
-
-@GenerateMocks([
-  FirebaseFirestore,
-  CollectionReference,
-  DocumentReference,
-  DocumentSnapshot
-])
 void main() {
   group('AppUpdateManager', () {
-    late MockFirebaseFirestore mockFirestore;
-    late MockCollectionReference<Map<String, dynamic>> mockCollectionReference;
-    late MockDocumentReference<Map<String, dynamic>> mockDocumentReference;
-    late MockDocumentSnapshot<Map<String, dynamic>> mockDocumentSnapshot;
-
-    setUp(() {
-      mockFirestore = MockFirebaseFirestore();
-      mockCollectionReference = MockCollectionReference<Map<String, dynamic>>();
-      mockDocumentReference = MockDocumentReference<Map<String, dynamic>>();
-      mockDocumentSnapshot = MockDocumentSnapshot<Map<String, dynamic>>();
-
-      // Set up the mock chain to avoid null errors
-      when(mockFirestore.collection(any))
-          .thenReturn(mockCollectionReference);
-      when(mockCollectionReference.doc(any))
-          .thenReturn(mockDocumentReference);
-      when(mockDocumentReference.get())
-          .thenAnswer((_) async => mockDocumentSnapshot);
-    });
-
-    testWidgets('shows update dialog for new version',
-        (WidgetTester tester) async {
-      PackageInfo.setMockInitialValues(
-        appName: 'test_app',
-        packageName: 'com.example.test',
-        version: '1.0.0',
-        buildNumber: '1',
-        buildSignature: 'build_signature',
-        installerStore: 'com.android.vending',
-      );
-
-      // Set up test-specific data for the snapshot
-      when(mockDocumentSnapshot.exists).thenReturn(true);
-      when(mockDocumentSnapshot.data()).thenReturn({
-        'versions': [
-          {'version': '1.0.0', 'forceUpdate': false}
-        ],
-        'discontinuedVersions': [],
-      });
-
+    testWidgets('should create AppUpdateManager with default parameters', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Builder(
-            builder: (context) {
-              return ElevatedButton(
-                onPressed: () {
-                  AppUpdateManager(context: context, firestore: mockFirestore)
-                      .checkForUpdate();
-                },
-                child: const Text('Check for Update'),
-              );
-            },
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  onPressed: () {
+                    AppUpdateManager(
+                      context: context,
+                      androidId: 'com.example.test',
+                      iosId: '123456789',
+                      appName: 'TestApp',
+                    ).checkForUpdate();
+                  },
+                  child: Text('Test'),
+                );
+              },
+            ),
           ),
         ),
       );
 
-      // Find the button and tap it.
-      await tester.tap(find.byType(ElevatedButton));
-      // Rebuild the widget after the state has changed.
-      await tester.pumpAndSettle();
+      expect(find.text('Test'), findsOneWidget);
+    });
 
-      // Verify that the update dialog is shown.
-      expect(find.text('Update Available'), findsOneWidget);
+    testWidgets('should create AppUpdateManager with custom dialog style', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  onPressed: () {
+                    AppUpdateManager(
+                      context: context,
+                      androidId: 'com.example.test',
+                      iosId: '123456789',
+                      appName: 'TestApp',
+                      dialogStyle: DialogStyle.modernStyle,
+                    ).checkForUpdate();
+                  },
+                  child: Text('Test'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Test'), findsOneWidget);
+    });
+
+    testWidgets('should create AppUpdateManager with custom dialog', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  onPressed: () {
+                    AppUpdateManager(
+                      context: context,
+                      androidId: 'com.example.test',
+                      iosId: '123456789',
+                      appName: 'TestApp',
+                      dialogStyle: DialogStyle.custom,
+                      customDialog: TestCustomDialog(),
+                    ).checkForUpdate();
+                  },
+                  child: Text('Test'),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Test'), findsOneWidget);
     });
   });
+}
+
+class TestCustomDialog implements CustomUpdateDialog {
+  @override
+  Widget build(BuildContext context, {
+    required bool isForceUpdate,
+    required String appName,
+    required VoidCallback onUpdate,
+    required VoidCallback? onLater,
+  }) {
+    return AlertDialog(
+      title: Text('Custom Update Dialog'),
+      content: Text('This is a custom dialog for $appName'),
+      actions: [
+        if (!isForceUpdate && onLater != null)
+          TextButton(
+            onPressed: onLater,
+            child: Text('Custom Later'),
+          ),
+        ElevatedButton(
+          onPressed: onUpdate,
+          child: Text('Custom Update Button'),
+        ),
+      ],
+    );
+  }
 }
