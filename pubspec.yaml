@@ -1,6 +1,6 @@
 name: flutter_app_update_manager
 description: "A Powerful Flutter Package To Easily Manage In-App Updates Using Firebase Firestore With Multiple Dialog Styles and Custom Dialog Support."
-version: 0.1.2
+version: 0.1.3
 homepage: https://github.com/muzzammil763/flutter_app_update_manager
 repository: https://github.com/muzzammil763/flutter_app_update_manager
 

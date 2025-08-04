@@ -354,10 +354,6 @@ class AppUpdateManager {
             'version': '0.0.1+1',
             'forceUpdate': true
           },
-          {
-            'version': '0.0.2+1',
-            'forceUpdate': false
-          }
         ]
       });
       
@@ -369,10 +365,6 @@ class AppUpdateManager {
             'version': '0.0.1+1',
             'forceUpdate': true
           },
-          {
-            'version': '0.0.2+1',
-            'forceUpdate': false
-          }
         ]
       });
       
