@@ -151,8 +151,8 @@ class AppUpdateManager {
   /// 1. Fetches current app version using package_info_plus
   /// 2. Detects platform (Android/iOS) automatically
   /// 3. Queries Firestore for available versions
-  /// 4. Shows update dialog if newer version is found
-  /// 5. Handles force updates and discontinued versions
+  /// 4. Shows update dialog if exact version match is found
+  /// 5. Handles force updates and optional updates
   /// 6. Launches store URL when user chooses to update
   /// 
   /// ## Firestore Structure:
@@ -168,7 +168,6 @@ class AppUpdateManager {
   /// ```json
   /// {
   ///   "version": "1.2.0",
-  ///   "isDiscontinued": false,
   ///   "forceUpdate": false
   /// }
   /// ```
@@ -245,17 +244,9 @@ class AppUpdateManager {
         
         // Fallback to original structure
         final versions = data['versions'] as List<dynamic>;
-        final discontinuedVersions = data['discontinuedVersions'] as List<dynamic>;
         
         debugPrint('AppUpdateManager: Using original version structure');
         debugPrint('AppUpdateManager: Versions from Firestore: $versions');
-        debugPrint('AppUpdateManager: Discontinued versions: $discontinuedVersions');
-
-        if (discontinuedVersions.contains(currentVersion)) {
-          debugPrint('AppUpdateManager: Current version is discontinued, showing force update dialog');
-          _showUpdateDialog(isForceUpdate: true);
-          return;
-        }
 
         // Check for newer versions
         for (var versionData in versions) {
@@ -296,12 +287,10 @@ class AppUpdateManager {
   ///   "versions": [
   ///     {
   ///       "version": "0.0.1+1",
-  ///       "isDiscontinued": true,
   ///       "forceUpdate": true
   ///     },
   ///     {
   ///       "version": "0.0.2+1",
-  ///       "isDiscontinued": false,
   ///       "forceUpdate": false
   ///     }
   ///   ]

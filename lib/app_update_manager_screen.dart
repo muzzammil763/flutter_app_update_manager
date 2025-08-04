@@ -1,16 +1,15 @@
-import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 /// A comprehensive screen for managing app update configurations.
-/// 
+///
 /// This screen provides a user-friendly interface for:
 /// - Managing version configurations for Android and iOS
 /// - Setting force update flags
 /// - Adding/removing versions
 /// - Configuring app store URLs
-/// 
+///
 /// ## Features:
 /// - Platform-specific tabs (Android/iOS)
 /// - Version management with force update controls
@@ -19,14 +18,11 @@ import 'package:flutter/material.dart';
 class AppUpdateManagerScreen extends StatefulWidget {
   /// The screen title.
   final String title;
-  
+
   /// Creates an AppUpdateManagerScreen.
-  /// 
+  ///
   /// [title] - The screen title (optional, defaults to "App Update Manager")
-  const AppUpdateManagerScreen({
-    super.key,
-    this.title = "App Update Manager",
-  });
+  const AppUpdateManagerScreen({super.key, this.title = "App Update Manager"});
 
   @override
   State<AppUpdateManagerScreen> createState() => _AppUpdateManagerScreenState();
@@ -36,16 +32,16 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   bool _loading = true;
   bool _saving = false;
-  
+
   // Platform tab selection (0 = Android, 1 = iOS)
   int _selectedPlatformIndex = 0;
-  
+
   // Form controllers
   late TextEditingController _appStoreController;
   late TextEditingController _playStoreController;
   List<TextEditingController> _versionControllers = [];
   List<TextEditingController> _versionControllersIos = [];
-  
+
   // Data storage
   Map<String, dynamic> _settings = {};
   List<Map<String, dynamic>> _versions = [];
@@ -78,35 +74,49 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
 
   Future<void> _fetchSettings() async {
     setState(() => _loading = true);
-    
+
     try {
       // Fetch Android settings
-      final androidDoc = await _firestore.collection('AppUpdateManager').doc('Android').get();
-      final iosDoc = await _firestore.collection('AppUpdateManager').doc('Ios').get();
-      
+      final androidDoc = await _firestore
+          .collection('AppUpdateManager')
+          .doc('Android')
+          .get();
+      final iosDoc = await _firestore
+          .collection('AppUpdateManager')
+          .doc('Ios')
+          .get();
+
       setState(() {
         if (androidDoc.exists) {
           final androidData = androidDoc.data()!;
           _settings['androidId'] = androidData['androidId'] ?? '';
-          _versions = List<Map<String, dynamic>>.from(androidData['versions'] ?? []);
+          _versions = List<Map<String, dynamic>>.from(
+            androidData['versions'] ?? [],
+          );
         }
-        
+
         if (iosDoc.exists) {
           final iosData = iosDoc.data()!;
           _settings['iosId'] = iosData['iosId'] ?? '';
-          _versionsIos = List<Map<String, dynamic>>.from(iosData['versions'] ?? []);
+          _versionsIos = List<Map<String, dynamic>>.from(
+            iosData['versions'] ?? [],
+          );
         }
-        
+
         _originalSettings = Map<String, dynamic>.from(_settings);
-        _originalVersions = List<Map<String, dynamic>>.from(_versions.map((e) => Map<String, dynamic>.from(e)));
-        _originalVersionsIos = List<Map<String, dynamic>>.from(_versionsIos.map((e) => Map<String, dynamic>.from(e)));
-        
+        _originalVersions = List<Map<String, dynamic>>.from(
+          _versions.map((e) => Map<String, dynamic>.from(e)),
+        );
+        _originalVersionsIos = List<Map<String, dynamic>>.from(
+          _versionsIos.map((e) => Map<String, dynamic>.from(e)),
+        );
+
         _appStoreController.text = _settings['iosId'] ?? '';
         _playStoreController.text = _settings['androidId'] ?? '';
-        
+
         // Initialize version controllers
         _initializeVersionControllers();
-        
+
         _hasChanges = false;
         _loading = false;
       });
@@ -124,13 +134,13 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
     for (var controller in _versionControllersIos) {
       controller.dispose();
     }
-    
+
     // Create new controllers
     _versionControllers = List.generate(
       _versions.length,
       (i) => TextEditingController(text: _versions[i]['version'] ?? ''),
     );
-    
+
     _versionControllersIos = List.generate(
       _versionsIos.length,
       (i) => TextEditingController(text: _versionsIos[i]['version'] ?? ''),
@@ -139,7 +149,7 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
 
   void _checkForChanges() {
     bool changed = false;
-    
+
     // Check app IDs
     if (_appStoreController.text != (_originalSettings['iosId'] ?? '')) {
       changed = true;
@@ -147,7 +157,7 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
     if (_playStoreController.text != (_originalSettings['androidId'] ?? '')) {
       changed = true;
     }
-    
+
     // Check Android versions
     if (_versions.length != _originalVersions.length) {
       changed = true;
@@ -166,7 +176,7 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
         }
       }
     }
-    
+
     // Check iOS versions
     if (_versionsIos.length != _originalVersionsIos.length) {
       changed = true;
@@ -185,7 +195,7 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
         }
       }
     }
-    
+
     if (_hasChanges != changed) {
       setState(() {
         _hasChanges = changed;
@@ -195,20 +205,20 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
 
   Future<void> _saveSettings() async {
     setState(() => _saving = true);
-    
+
     try {
       // Update Android document
       await _firestore.collection('AppUpdateManager').doc('Android').set({
         'androidId': _playStoreController.text,
         'versions': _versions,
       });
-      
+
       // Update iOS document
       await _firestore.collection('AppUpdateManager').doc('Ios').set({
         'iosId': _appStoreController.text,
         'versions': _versionsIos,
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Settings updated successfully!')),
@@ -229,7 +239,9 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
   Widget _buildVersionsList() {
     final isAndroid = _selectedPlatformIndex == 0;
     final versionsList = isAndroid ? _versions : _versionsIos;
-    final versionControllersList = isAndroid ? _versionControllers : _versionControllersIos;
+    final versionControllersList = isAndroid
+        ? _versionControllers
+        : _versionControllersIos;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,26 +251,17 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
           children: [
             Text(
               'Version Management',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
             ),
             IconButton(
               icon: Icon(Icons.add, color: Colors.blue),
               onPressed: () {
                 setState(() {
                   if (isAndroid) {
-                    _versions.add({
-                      'version': '',
-                      'forceUpdate': false,
-                    });
+                    _versions.add({'version': '', 'forceUpdate': false});
                     _versionControllers.add(TextEditingController());
                   } else {
-                    _versionsIos.add({
-                      'version': '',
-                      'forceUpdate': false,
-                    });
+                    _versionsIos.add({'version': '', 'forceUpdate': false});
                     _versionControllersIos.add(TextEditingController());
                   }
                 });
@@ -274,10 +277,7 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
             child: Center(
               child: Text(
                 'No versions configured',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
             ),
           )
@@ -285,7 +285,7 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
           ...versionsList.asMap().entries.map((entry) {
             final idx = entry.key;
             final item = entry.value;
-            
+
             return Dismissible(
               key: ValueKey('version_$idx'),
               direction: DismissDirection.horizontal,
@@ -374,7 +374,7 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
                 ),
               ),
             );
-          }).toList(),
+          }),
       ],
     );
   }
@@ -382,12 +382,7 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
+      appBar: AppBar(title: Text(widget.title)),
       body: _loading
           ? Center(child: CircularProgressIndicator())
           : SafeArea(
@@ -397,18 +392,29 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Platform selector
-                    Container(
+                    SizedBox(
                       width: double.infinity,
                       child: CupertinoSegmentedControl<int>(
                         children: {
                           0: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                            child: Text('Android', style: TextStyle(fontWeight: FontWeight.bold)),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            child: Text(
+                              'Android',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                           ),
                           1: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                            child: Text('iOS', style: TextStyle(fontWeight: FontWeight.bold)),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            child: Text(
+                              'iOS',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                           ),
                         },
                         onValueChanged: (int value) {
@@ -423,8 +429,6 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
                       ),
                     ),
                     SizedBox(height: 24),
-                    
-                    // App Store URLs
                     TextField(
                       controller: _appStoreController,
                       decoration: InputDecoration(
@@ -451,23 +455,18 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
                       },
                     ),
                     SizedBox(height: 24),
-                    
+
                     // Version management
                     _buildVersionsList(),
                     SizedBox(height: 24),
-                    
+
                     // Save button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _hasChanges && !_saving ? _saveSettings : null,
-                        child: _saving 
-                            ? SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : Text('Save Changes'),
+                        onPressed: _hasChanges && !_saving
+                            ? _saveSettings
+                            : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,
                           foregroundColor: Colors.white,
@@ -476,6 +475,15 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
+                        child: _saving
+                            ? SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text('Save Changes'),
                       ),
                     ),
                   ],
@@ -484,4 +492,4 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
             ),
     );
   }
-} 
+}
