@@ -26,6 +26,84 @@ A powerful Flutter package to easily manage in-app updates using Firebase Firest
 |-----------------|---------------|
 | ![Material Dialog](Screenshots/material.jpeg) | ![Custom Dialog](Screenshots/custom.jpeg) |
 
+### Dialog Style Usage Examples
+
+#### Default Style
+```dart
+AppUpdateManager(
+  context: context,
+  dialogStyle: DialogStyle.defaultStyle,
+  showLaterButton: true,
+).checkForUpdate();
+```
+
+#### Modern Style
+```dart
+AppUpdateManager(
+  context: context,
+  dialogStyle: DialogStyle.modernStyle,
+  showLaterButton: true,
+).checkForUpdate();
+```
+
+#### Material Style
+```dart
+AppUpdateManager(
+  context: context,
+  dialogStyle: DialogStyle.materialStyle,
+  showLaterButton: true,
+).checkForUpdate();
+```
+
+#### Custom Style
+```dart
+class MyCustomDialog implements CustomUpdateDialog {
+  @override
+  Widget build(BuildContext context, {
+    required bool isForceUpdate,
+    required String appName,
+    required VoidCallback onUpdate,
+    required VoidCallback? onLater,
+  }) {
+    return Dialog(
+      child: Container(
+        padding: EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(colors: [Colors.blue, Colors.purple]),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.rocket_launch, size: 48, color: Colors.white),
+            SizedBox(height: 16),
+            Text('🚀 New Version Available!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            SizedBox(height: 8),
+            Text('A new version of $appName is available!'),
+            SizedBox(height: 24),
+            Row(
+              children: [
+                if (onLater != null)
+                  Expanded(child: OutlinedButton(onPressed: onLater, child: Text('Later'))),
+                SizedBox(width: 12),
+                Expanded(child: ElevatedButton(onPressed: onUpdate, child: Text('Update Now'))),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+AppUpdateManager(
+  context: context,
+  dialogStyle: DialogStyle.custom,
+  customDialog: MyCustomDialog(),
+  showLaterButton: true,
+).checkForUpdate();
+```
+
 ## Installation
 
 Add this to your `pubspec.yaml`:
@@ -75,6 +153,19 @@ AppUpdateManager(
   customDialog: MyCustomDialog(),
 ).checkForUpdate();
 ```
+
+### Quick Start with Auto Setup
+
+For the easiest setup, use the `autoSetup` parameter to automatically create the Firestore structure:
+
+```dart
+AppUpdateManager(
+  context: context,
+  autoSetup: true, // This will create the Firestore structure automatically
+).checkForUpdate();
+```
+
+**⚠️ Important**: Set `autoSetup: false` after the first run to prevent overwriting your data!
 
 ## API Reference
 
@@ -192,59 +283,64 @@ class MyCustomDialog implements CustomUpdateDialog {
     required VoidCallback onUpdate,
     required VoidCallback? onLater,
   }) {
-    return Dialog(
-      child: Container(
-        padding: EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(colors: [Colors.blue, Colors.purple]),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.rocket_launch, size: 48, color: Colors.white),
-            SizedBox(height: 16),
-            Text(
-              '🚀 New Version Available!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: RichText(
-                textAlign: TextAlign.start,
-                text: TextSpan(
-                  children: [
-                    TextSpan(text: 'A new version of '),
-                    TextSpan(
-                      text: appName,
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    TextSpan(text: ' is available!'),
-                  ],
+    return WillPopScope(
+      onWillPop: () async => !isForceUpdate,
+      child: Dialog(
+        child: Container(
+          padding: EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(colors: [Colors.blue, Colors.purple]),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.rocket_launch, size: 48, color: Colors.white),
+              SizedBox(height: 16),
+              Text(
+                '🚀 New Version Available!',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: RichText(
+                  textAlign: TextAlign.start,
+                  text: TextSpan(
+                    children: [
+                      TextSpan(text: 'A new version of '),
+                      TextSpan(
+                        text: appName,
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(text: ' is available!'),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            SizedBox(height: 24),
-            Row(
-              spacing:8,
-              children: [
-                if (!isForceUpdate && onLater != null)
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: onLater,
-                      child: Text('Maybe Later'),
+              SizedBox(height: 24),
+              Column(
+                spacing: 8,
+                children: [
+                  if (!isForceUpdate && onLater != null)
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: onLater,
+                        child: Text('Maybe Later'),
+                      ),
+                    ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: onUpdate,
+                      child: Text('Update Now'),
                     ),
                   ),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: onUpdate,
-                    child: Text('Update Now'),
-                  ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -276,6 +372,7 @@ Create a collection named `AppUpdateManager` with documents for each platform:
 
 ```json
 {
+  "androidId": "com.example.myapp",
   "versions": [
     {
       "version": "0.0.1+1",
@@ -289,11 +386,16 @@ Create a collection named `AppUpdateManager` with documents for each platform:
 }
 ```
 
-**Original Structure (Legacy):**
+**For iOS:**
 
 ```json
 {
+  "iosId": "123456789",
   "versions": [
+    {
+      "version": "0.0.1+1",
+      "forceUpdate": true
+    },
     {
       "version": "0.0.2+1",
       "forceUpdate": false
@@ -375,6 +477,9 @@ The example app demonstrates:
 ### Step 2: First Run with Auto Setup
 
 ```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_app_update_manager/flutter_app_update_manager.dart';
+
 void main() {
   runApp(MyApp());
 }
@@ -383,6 +488,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'App Update Manager Demo',
       home: MyHomePage(),
     );
   }
@@ -398,11 +504,9 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     
-    // First run with auto setup
+    // Check for updates
     AppUpdateManager(
       context: context,
-      androidId: 'com.example.myapp',
-      iosId: '123456789',
       appName: "App Name",
       autoSetup: true, // ⚠️ Set to false after first run
     ).checkForUpdate();
@@ -468,8 +572,6 @@ void initState() {
   super.initState();
   AppUpdateManager(
     context: context,
-    androidId: 'your.android.app.id',
-    iosId: 'your.ios.app.id',
     showLaterButton: true, // Show "Later" button for optional updates
     appName: "MyApp",
     autoSetup: true, // Remove this after first run
@@ -478,6 +580,7 @@ void initState() {
 ```
 
 **How it works:**
+- App IDs are automatically fetched from Firestore (`AppUpdateManager/Android/androidId` and `AppUpdateManager/Ios/iosId`)
 - If your app version is `0.0.1+1` and Firestore has `{"version": "0.0.1+1", "forceUpdate": true}`, dialog shows
 - If your app version is `0.0.1+1` and Firestore has `{"version": "0.0.1+0", "forceUpdate": false}`, no dialog
 - If your app version is `0.0.1+1` and Firestore has `{"version": "0.0.0+1", "forceUpdate": false}`, no dialog
@@ -522,12 +625,8 @@ You can customize the update dialog by passing additional parameters to the `App
 ```dart
 AppUpdateManager(
   context: context,
-  androidId: 'your.android.app.id',
-  iosId: 'your.ios.app.id',
   showLaterButton: true, // Show a "Later" button for optional updates
   appName: 'My Awesome App', // Your app's name
-  playStoreUrl: 'https://play.google.com/store/apps/details?id=your.android.app.id', // Custom Play Store URL
-  appStoreUrl: 'https://apps.apple.com/app/id-your.ios.app.id', // Custom App Store URL
   autoSetup: false, // Set to false after initial setup
   dialogStyle: DialogStyle.modernStyle, // Choose dialog style
 ).checkForUpdate();

@@ -15,8 +15,6 @@ void main() {
                   onPressed: () {
                     AppUpdateManager(
                       context: context,
-                      androidId: 'com.example.test',
-                      iosId: '123456789',
                       appName: 'TestApp',
                     ).checkForUpdate();
                   },
@@ -41,8 +39,6 @@ void main() {
                   onPressed: () {
                     AppUpdateManager(
                       context: context,
-                      androidId: 'com.example.test',
-                      iosId: '123456789',
                       appName: 'TestApp',
                       dialogStyle: DialogStyle.modernStyle,
                     ).checkForUpdate();
@@ -68,8 +64,6 @@ void main() {
                   onPressed: () {
                     AppUpdateManager(
                       context: context,
-                      androidId: 'com.example.test',
-                      iosId: '123456789',
                       appName: 'TestApp',
                       dialogStyle: DialogStyle.custom,
                       customDialog: TestCustomDialog(),

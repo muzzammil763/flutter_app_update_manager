@@ -46,9 +46,6 @@ class _MyHomePageState extends State<MyHomePage> {
   void _showUpdateDialog() {
     AppUpdateManager(
       context: context,
-      // App IDs can be set in Firestore or here
-      androidId: 'com.example.example',
-      iosId: 'com.example.example',
       appName: appName,
       dialogStyle: currentDialogStyle,
       customDialog: currentDialogStyle == DialogStyle.custom ? CustomUpdateDialogImpl() : null,

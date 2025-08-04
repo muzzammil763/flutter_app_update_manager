@@ -1,44 +1,46 @@
 library flutter_app_update_manager;
 
+import 'dart:ui'; // Added for ImageFilter
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:ui'; // Added for ImageFilter
 
 // Export the management screen
 export 'app_update_manager_screen.dart';
 
 /// Dialog style options for update notifications.
-/// 
+///
 /// Choose from predefined styles or implement your own custom dialog.
 enum DialogStyle {
   /// Classic AlertDialog with clean design and standard Material Design buttons.
   defaultStyle,
-  
+
   /// Modern rounded dialog with icons, enhanced typography, and improved spacing.
   modernStyle,
-  
+
   /// Material Design 3 inspired style with gradient backgrounds and modern visuals.
   materialStyle,
-  
+
   /// Custom dialog implementation - use your own dialog widget.
   custom,
 }
 
 /// Abstract interface for creating custom update dialogs.
-/// 
+///
 /// Implement this interface to create your own beautiful update dialogs
 /// with full control over design and behavior.
 abstract class CustomUpdateDialog {
   /// Builds the custom update dialog widget.
-  /// 
+  ///
   /// [context] - Build context for navigation and theme access
   /// [isForceUpdate] - True when update is mandatory (hide "Later" button)
   /// [appName] - The app name to display in the dialog
   /// [onUpdate] - Callback when user chooses to update
   /// [onLater] - Callback when user chooses to update later (null if force update)
-  Widget build(BuildContext context, {
+  Widget build(
+    BuildContext context, {
     required bool isForceUpdate,
     required String appName,
     required VoidCallback onUpdate,
@@ -47,17 +49,17 @@ abstract class CustomUpdateDialog {
 }
 
 /// Main class for managing app updates with Firebase Firestore integration.
-/// 
+///
 /// This class provides a complete solution for in-app update management,
 /// including version checking, dialog display, and store URL launching.
-/// 
+///
 /// ## Features:
 /// - Automatic version comparison with Firestore
 /// - Multiple dialog styles (default, modern, material, custom)
 /// - Force update handling
 /// - Platform-specific store URL generation
 /// - Auto setup for first-time configuration
-/// 
+///
 /// ## Example:
 /// ```dart
 /// AppUpdateManager(
@@ -70,22 +72,10 @@ abstract class CustomUpdateDialog {
 /// ```
 class AppUpdateManager {
   /// The build context used for showing dialogs and detecting platform.
-  /// 
+  ///
   /// Must be a valid context from a MaterialApp widget tree.
   final BuildContext context;
-  
-  /// Android package ID for generating Play Store URLs.
-  /// 
-  /// Example: 'com.example.myapp'
-  /// Can also be configured in Firestore for centralized management.
-  final String? androidId;
-  
-  /// iOS App Store ID for generating App Store URLs.
-  /// 
-  /// Example: '123456789'
-  /// Can also be configured in Firestore for centralized management.
-  final String? iosId;
-  
+
   /// App name to display in update dialogs.
   /// 
   /// Falls back to "App" if not provided.
@@ -104,20 +94,20 @@ class AppUpdateManager {
   /// Uses FirebaseFirestore.instance by default.
   /// Can be customized for testing or different environments.
   final FirebaseFirestore firestore;
-  
+
   /// Auto setup flag for creating Firestore structure.
-  /// 
+  ///
   /// When true, creates the required Firestore collection and documents
   /// with sample data. ⚠️ Set to false after first run to prevent data overwrites.
   final bool autoSetup;
-  
+
   /// Dialog style for update notifications.
-  /// 
+  ///
   /// Choose from predefined styles or use DialogStyle.custom with a custom dialog.
   final DialogStyle dialogStyle;
-  
+
   /// Custom dialog implementation.
-  /// 
+  ///
   /// Required when dialogStyle is DialogStyle.custom.
   /// Implement CustomUpdateDialog interface to create your own dialog.
   final CustomUpdateDialog? customDialog;
@@ -125,8 +115,6 @@ class AppUpdateManager {
   /// Creates an AppUpdateManager instance.
   /// 
   /// [context] - The build context (required)
-  /// [androidId] - Android package ID (optional, can be set in Firestore)
-  /// [iosId] - iOS App Store ID (optional, can be set in Firestore)
   /// [appName] - App name for dialogs (optional, defaults to "App")
   /// [showLaterButton] - Show "Later" button for optional updates (optional, defaults to false)
   /// [firestore] - Custom Firestore instance (optional, uses default)
@@ -135,8 +123,6 @@ class AppUpdateManager {
   /// [customDialog] - Custom dialog implementation (optional, required for custom style)
   AppUpdateManager({
     required this.context,
-    this.androidId,
-    this.iosId,
     this.appName,
     this.showLaterButton,
     FirebaseFirestore? firestore,
@@ -146,7 +132,7 @@ class AppUpdateManager {
   }) : firestore = firestore ?? FirebaseFirestore.instance;
 
   /// Checks for available updates by comparing current app version with Firestore.
-  /// 
+  ///
   /// This method:
   /// 1. Fetches current app version using package_info_plus
   /// 2. Detects platform (Android/iOS) automatically
@@ -154,16 +140,16 @@ class AppUpdateManager {
   /// 4. Shows update dialog if exact version match is found
   /// 5. Handles force updates and optional updates
   /// 6. Launches store URL when user chooses to update
-  /// 
+  ///
   /// ## Firestore Structure:
   /// Expects a collection named 'AppUpdateManager' with documents for each platform:
   /// - Document 'Android' for Android platform
   /// - Document 'Ios' for iOS platform
-  /// 
+  ///
   /// Each document should contain:
   /// - `androidId` and `iosId` fields (optional, can be set in code)
   /// - `versions` array with version objects
-  /// 
+  ///
   /// Version object structure:
   /// ```json
   /// {
@@ -171,65 +157,76 @@ class AppUpdateManager {
   ///   "forceUpdate": false
   /// }
   /// ```
-  /// 
+  ///
   /// ## Returns:
   /// Future<void> - Completes when the update check is finished
-  /// 
+  ///
   /// ## Throws:
   /// May throw exceptions for network errors or invalid Firestore data
   Future<void> checkForUpdate() async {
     debugPrint('AppUpdateManager: Starting update check...');
-    
+
     // Auto setup if enabled
     if (autoSetup) {
       await _autoSetupFirestore();
     }
-    
+
     final packageInfo = await PackageInfo.fromPlatform();
     final currentVersion = packageInfo.version;
     debugPrint('AppUpdateManager: Current app version: $currentVersion');
 
-    final platform = Theme.of(context).platform == TargetPlatform.android ? 'Android' : 'Ios';
+    final platform = Theme.of(context).platform == TargetPlatform.android
+        ? 'Android'
+        : 'Ios';
     debugPrint('AppUpdateManager: Platform detected: $platform');
 
     try {
-      final doc = await firestore.collection('AppUpdateManager').doc(platform).get();
+      final doc = await firestore
+          .collection('AppUpdateManager')
+          .doc(platform)
+          .get();
       debugPrint('AppUpdateManager: Firestore document exists: ${doc.exists}');
 
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
-        
+
         // Get app IDs from Firestore
-        final firestoreAndroidId = data['androidId'] as String? ?? androidId;
-        final firestoreIosId = data['iosId'] as String? ?? iosId;
-        
+        final firestoreAndroidId = data['androidId'] as String?;
+        final firestoreIosId = data['iosId'] as String?;
+
         // Check for new simplified structure first
         if (data.containsKey('versions') && data['versions'] is List) {
           final versions = data['versions'] as List<dynamic>;
           debugPrint('AppUpdateManager: Using simplified version structure');
           debugPrint('AppUpdateManager: Versions from Firestore: $versions');
-          
+
           // Find exact version match
           bool foundExactMatch = false;
           bool shouldShowDialog = false;
           bool isForceUpdate = false;
-          
+
           for (var versionData in versions) {
             final version = versionData['version'] as String;
             final forceUpdate = versionData['forceUpdate'] as bool? ?? false;
-            
-            debugPrint('AppUpdateManager: Checking version: $version (forceUpdate: $forceUpdate)');
-            debugPrint('AppUpdateManager: Current app version: $currentVersion');
-            
+
+            debugPrint(
+              'AppUpdateManager: Checking version: $version (forceUpdate: $forceUpdate)',
+            );
+            debugPrint(
+              'AppUpdateManager: Current app version: $currentVersion',
+            );
+
             // Check for exact match first (version + build number)
             if (version == currentVersion) {
               foundExactMatch = true;
               shouldShowDialog = true;
               isForceUpdate = forceUpdate;
-              debugPrint('AppUpdateManager: Exact version match found, showing dialog');
+              debugPrint(
+                'AppUpdateManager: Exact version match found, showing dialog',
+              );
               break;
             }
-            
+
             // If no exact match, check if Firestore version is without build number
             // and current version has build number, then compare version parts
             if (!version.contains('+') && currentVersion.contains('+')) {
@@ -238,11 +235,13 @@ class AppUpdateManager {
                 foundExactMatch = true;
                 shouldShowDialog = true;
                 isForceUpdate = forceUpdate;
-                debugPrint('AppUpdateManager: Version match found (Firestore without build, app with build), showing dialog');
+                debugPrint(
+                  'AppUpdateManager: Version match found (Firestore without build, app with build), showing dialog',
+                );
                 break;
               }
             }
-            
+
             // If Firestore version has build number but app version doesn't, compare version parts
             if (version.contains('+') && !currentVersion.contains('+')) {
               final firestoreVersionWithoutBuild = version.split('+')[0];
@@ -250,63 +249,75 @@ class AppUpdateManager {
                 foundExactMatch = true;
                 shouldShowDialog = true;
                 isForceUpdate = forceUpdate;
-                debugPrint('AppUpdateManager: Version match found (Firestore with build, app without build), showing dialog');
+                debugPrint(
+                  'AppUpdateManager: Version match found (Firestore with build, app without build), showing dialog',
+                );
                 break;
               }
             }
           }
-          
+
           if (shouldShowDialog) {
             _showUpdateDialog(isForceUpdate: isForceUpdate);
             return;
           }
-          
+
           if (!foundExactMatch) {
-            debugPrint('AppUpdateManager: No exact version match found, no update needed');
+            debugPrint(
+              'AppUpdateManager: No exact version match found, no update needed',
+            );
           }
           return;
         }
-        
+
         // Fallback to original structure
         final versions = data['versions'] as List<dynamic>;
-        
+
         debugPrint('AppUpdateManager: Using original version structure');
         debugPrint('AppUpdateManager: Versions from Firestore: $versions');
 
         // Check for newer versions
         for (var versionData in versions) {
           final firestoreVersion = versionData['version'] as String;
-          
+
           // Check for exact match first
           if (firestoreVersion == currentVersion) {
-            debugPrint('AppUpdateManager: Exact version match found, showing update dialog');
+            debugPrint(
+              'AppUpdateManager: Exact version match found, showing update dialog',
+            );
             _showUpdateDialog(isForceUpdate: versionData['forceUpdate']);
             break;
           }
-          
+
           // If no exact match, check if Firestore version is without build number
           // and current version has build number, then compare version parts
           if (!firestoreVersion.contains('+') && currentVersion.contains('+')) {
             final currentVersionWithoutBuild = currentVersion.split('+')[0];
             if (firestoreVersion == currentVersionWithoutBuild) {
-              debugPrint('AppUpdateManager: Version match found (Firestore without build, app with build), showing dialog');
+              debugPrint(
+                'AppUpdateManager: Version match found (Firestore without build, app with build), showing dialog',
+              );
               _showUpdateDialog(isForceUpdate: versionData['forceUpdate']);
               break;
             }
           }
-          
+
           // If Firestore version has build number but app version doesn't, compare version parts
           if (firestoreVersion.contains('+') && !currentVersion.contains('+')) {
             final firestoreVersionWithoutBuild = firestoreVersion.split('+')[0];
             if (firestoreVersionWithoutBuild == currentVersion) {
-              debugPrint('AppUpdateManager: Version match found (Firestore with build, app without build), showing dialog');
+              debugPrint(
+                'AppUpdateManager: Version match found (Firestore with build, app without build), showing dialog',
+              );
               _showUpdateDialog(isForceUpdate: versionData['forceUpdate']);
               break;
             }
           }
         }
       } else {
-        debugPrint('AppUpdateManager: No Firestore document found for platform: $platform');
+        debugPrint(
+          'AppUpdateManager: No Firestore document found for platform: $platform',
+        );
       }
     } catch (e) {
       debugPrint('AppUpdateManager: Error during update check: $e');
@@ -314,14 +325,14 @@ class AppUpdateManager {
   }
 
   /// Automatically sets up the required Firestore structure with sample data.
-  /// 
+  ///
   /// This method creates:
   /// - Collection: 'AppUpdateManager'
   /// - Documents: 'Android' and 'Ios'
   /// - Sample version data for testing
-  /// 
+  ///
   /// ⚠️ **Important**: Set autoSetup to false after first run to prevent data overwrites.
-  /// 
+  ///
   /// ## Firestore Structure Created:
   /// ```json
   /// {
@@ -340,12 +351,14 @@ class AppUpdateManager {
   /// }
   /// ```
   Future<void> _autoSetupFirestore() async {
-    debugPrint('AppUpdateManager: Auto setup enabled, creating Firestore structure...');
-    
+    debugPrint(
+      'AppUpdateManager: Auto setup enabled, creating Firestore structure...',
+    );
+
     try {
       // Create collection and documents for both platforms
       final collection = firestore.collection('AppUpdateManager');
-      
+
       // Setup for Android
       await collection.doc('Android').set({
         'androidId': 'com.example.myapp',
@@ -353,7 +366,7 @@ class AppUpdateManager {
           {
             'version': '0.0.1+1',
             'forceUpdate': true
-          },
+          }
         ]
       });
       
@@ -364,58 +377,65 @@ class AppUpdateManager {
           {
             'version': '0.0.1+1',
             'forceUpdate': true
-          },
+          }
         ]
       });
-      
+
       debugPrint('AppUpdateManager: Firestore structure created successfully!');
       debugPrint('AppUpdateManager: Collection: AppUpdateManager');
       debugPrint('AppUpdateManager: Documents: Android, Ios');
-      debugPrint('AppUpdateManager: Structure: Simplified (versions array with forceUpdate flag)');
-      debugPrint('AppUpdateManager: ⚠️  IMPORTANT: Set autoSetup: false after first run to prevent overwriting your data!');
-      
+      debugPrint(
+        'AppUpdateManager: Structure: Simplified (versions array with forceUpdate flag)',
+      );
+      debugPrint(
+        'AppUpdateManager: ⚠️  IMPORTANT: Set autoSetup: false after first run to prevent overwriting your data!',
+      );
     } catch (e) {
       debugPrint('AppUpdateManager: Error during auto setup: $e');
     }
   }
 
   /// Shows the update dialog based on the configured dialog style.
-  /// 
+  ///
   /// [isForceUpdate] - Whether this is a force update (hides "Later" button)
   /// [androidId] - Android package ID for store URL (optional, uses instance androidId if not provided)
   /// [iosId] - iOS App Store ID for store URL (optional, uses instance iosId if not provided)
-  /// 
+  ///
   /// ## Dialog Selection Logic:
   /// 1. If dialogStyle is DialogStyle.custom and customDialog is provided, uses custom dialog
   /// 2. Otherwise, uses predefined dialog based on dialogStyle
   /// 3. For force updates, barrierDismissible is set to false
-  /// 
+  ///
   /// ## Context Validation:
   /// - Checks if context is still mounted
   /// - Verifies MaterialApp ancestor exists
   /// - Skips dialog if validation fails
   void _showUpdateDialog({required bool isForceUpdate}) {
-    debugPrint('AppUpdateManager: _showUpdateDialog called with isForceUpdate: $isForceUpdate');
-    
+    debugPrint(
+      'AppUpdateManager: _showUpdateDialog called with isForceUpdate: $isForceUpdate',
+    );
+
     // Check if context is still valid and mounted
     if (!context.mounted) {
       debugPrint('AppUpdateManager: Context is not mounted, skipping dialog');
       return;
     }
-    
+
     // Check if we have MaterialApp ancestor
     final materialApp = context.findAncestorWidgetOfExactType<MaterialApp>();
     if (materialApp == null) {
-      debugPrint('AppUpdateManager: No MaterialApp found in widget tree, skipping dialog');
+      debugPrint(
+        'AppUpdateManager: No MaterialApp found in widget tree, skipping dialog',
+      );
       return;
     }
-    
+
     showDialog(
       context: context,
       barrierDismissible: !isForceUpdate,
       builder: (BuildContext context) {
         debugPrint('AppUpdateManager: Building dialog...');
-        
+
         // Use custom dialog if provided
         if (dialogStyle == DialogStyle.custom && customDialog != null) {
           return customDialog!.build(
@@ -426,12 +446,14 @@ class AppUpdateManager {
               Navigator.of(context).pop();
               _launchURL();
             },
-            onLater: isForceUpdate ? null : () {
-              Navigator.of(context).pop();
-            },
+            onLater: isForceUpdate
+                ? null
+                : () {
+                    Navigator.of(context).pop();
+                  },
           );
         }
-        
+
         // Use predefined dialog styles
         switch (dialogStyle) {
           case DialogStyle.defaultStyle:
@@ -448,10 +470,10 @@ class AppUpdateManager {
   }
 
   /// Builds the default dialog style - classic AlertDialog with clean design.
-  /// 
+  ///
   /// [context] - Build context for the dialog
   /// [isForceUpdate] - Whether this is a force update (hides "Later" button)
-  /// 
+  ///
   /// ## Features:
   /// - Standard AlertDialog design
   /// - Clean typography and spacing
@@ -467,7 +489,9 @@ class AppUpdateManager {
         },
         child: AlertDialog(
           title: Text('Update Available'),
-          content: Text('A new version of ${appName ?? "the app"} is available. Please update to the latest version.'),
+          content: Text(
+            'A new version of ${appName ?? "the app"} is available. Please update to the latest version.',
+          ),
           actions: <Widget>[
             if (showLaterButton == true && !isForceUpdate)
               TextButton(
@@ -490,10 +514,10 @@ class AppUpdateManager {
   }
 
   /// Builds the modern dialog style - enhanced design with icons and better typography.
-  /// 
+  ///
   /// [context] - Build context for the dialog
   /// [isForceUpdate] - Whether this is a force update (hides "Later" button)
-  /// 
+  ///
   /// ## Features:
   /// - Rounded corners (20px border radius)
   /// - Update icon in title
@@ -554,16 +578,15 @@ class AppUpdateManager {
                 Text(
                   'A new version of ${appName ?? "the app"} is available. Please update to the latest version.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.black54,
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.black54),
                 ),
                 SizedBox(height: 24),
-                Row(
+                Column(
+                  spacing: 8,
                   children: [
                     if (showLaterButton == true && !isForceUpdate)
-                      Expanded(
+                      SizedBox(
+                        width: double.infinity,
                         child: TextButton(
                           child: Text('Later'),
                           onPressed: () {
@@ -572,22 +595,22 @@ class AppUpdateManager {
                         ),
                       ),
                     if (showLaterButton == true && !isForceUpdate)
-                      SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        child: Text('Update Now'),
-                        onPressed: () {
-                          _launchURL();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            _launchURL();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
+                          child: Text('Update Now'),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ],
@@ -599,10 +622,10 @@ class AppUpdateManager {
   }
 
   /// Builds the material dialog style - Material Design 3 inspired with gradient backgrounds.
-  /// 
+  ///
   /// [context] - Build context for the dialog
   /// [isForceUpdate] - Whether this is a force update (hides "Later" button)
-  /// 
+  ///
   /// ## Features:
   /// - Material Design 3 inspired styling
   /// - Gradient backgrounds and modern visuals
@@ -652,25 +675,21 @@ class AppUpdateManager {
                 SizedBox(height: 16),
                 Text(
                   'Update Available',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 8),
                 Text(
                   'A new version of ${appName ?? "the app"} is available.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[700],
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey[700]),
                 ),
                 SizedBox(height: 24),
-                Row(
+                Column(
+                  spacing: 8,
                   children: [
                     if (showLaterButton == true && !isForceUpdate) ...[
-                      Expanded(
+                      SizedBox(
+                        width: double.infinity,
                         child: OutlinedButton(
                           child: Text('Later'),
                           onPressed: () {
@@ -678,9 +697,9 @@ class AppUpdateManager {
                           },
                         ),
                       ),
-                      SizedBox(width: 12),
                     ],
-                    Expanded(
+                    SizedBox(
+                      width: double.infinity,
                       child: ElevatedButton(
                         child: Text('Update Now'),
                         onPressed: () {
@@ -700,17 +719,17 @@ class AppUpdateManager {
   }
 
   /// Launches the appropriate store URL based on platform and app IDs.
-  /// 
+  ///
   /// [androidId] - Android package ID for Play Store URL (optional, uses instance androidId if not provided)
   /// [iosId] - iOS App Store ID for App Store URL (optional, uses instance iosId if not provided)
-  /// 
+  ///
   /// ## URL Generation:
   /// - **Android**: `https://play.google.com/store/apps/details?id={androidId}`
   /// - **iOS**: `https://apps.apple.com/app/id{iosId}`
-  /// 
+  ///
   /// ## Platform Detection:
   /// Uses `Theme.of(context).platform` to detect Android or iOS
-  /// 
+  ///
   /// ## Throws:
   /// Throws exception if URL cannot be launched or if app IDs are missing
   Future<void> _launchURL({String? androidId, String? iosId}) async {
@@ -718,9 +737,10 @@ class AppUpdateManager {
     String? url;
 
     if (platform == TargetPlatform.android) {
-      url = 'https://play.google.com/store/apps/details?id=${androidId ?? this.androidId}';
+      url =
+          'https://play.google.com/store/apps/details?id=${androidId ?? 'com.example.myapp'}';
     } else if (platform == TargetPlatform.iOS) {
-      url = 'https://apps.apple.com/app/id${iosId ?? this.iosId}';
+      url = 'https://apps.apple.com/app/id${iosId ?? '123456789'}';
     }
 
     if (url != null && await canLaunchUrl(Uri.parse(url))) {
