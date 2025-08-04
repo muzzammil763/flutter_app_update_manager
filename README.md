@@ -16,7 +16,7 @@ A Powerful Flutter Package To Easily Manage In-App Updates Using Firebase Firest
 *   **Store URL Auto-Generation**: Automatically generates platform-specific store URLs.
 *   **Version Comparison**: Smart version comparison with build number support.
 *   **Default Dialog Customization**: Customize colors for title, text, and buttons.
-*   **Latest Firebase Compatibility**: Updated to work with Firebase v6.0.0+ and Firebase Core v4.0.0+.
+*   **Latest Firebase Compatibility**: Updated to work with Firebase v5.0.0+ and Firebase Core v3.0.0+.
 
 ## Screenshots
 
@@ -132,13 +132,17 @@ dependencies:
 
 ### Firebase Compatibility
 
-This package is compatible with the latest Firebase packages:
+This package is compatible with both the latest and previous Firebase packages:
 
 ```yaml
 dependencies:
-  firebase_core: ^4.0.0
-  cloud_firestore: ^6.0.0
+  firebase_core: ^3.0.0
+  cloud_firestore: ^5.0.0
 ```
+
+**Version Support:**
+- **Firebase Core**: v3.0.0+ (supports both v3.x and v4.x)
+- **Cloud Firestore**: v5.0.0+ (supports both v5.x and v6.x)
 
 ## Example App
 

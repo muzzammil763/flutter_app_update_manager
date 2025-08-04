@@ -445,7 +445,6 @@ class AppUpdateManager {
             isForceUpdate: isForceUpdate,
             appName: appName ?? 'App',
             onUpdate: () {
-              Navigator.of(context).pop();
               _launchURL();
             },
             onLater: isForceUpdate

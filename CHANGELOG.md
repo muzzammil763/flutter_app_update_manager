@@ -7,14 +7,16 @@
   - `buttonColor`: Customize text button colors (Later, Update Now)
   - `textColor`: Customize dialog content text color
   - `titleColor`: Customize dialog title color
-- **Latest Firebase Compatibility**: Updated to work with Firebase v6.0.0+ and Firebase Core v4.0.0+
+- **Enhanced Firebase Compatibility**: Updated to work with both latest and previous Firebase versions
+  - **Firebase Core**: v3.0.0+ (supports both v3.x and v4.x)
+  - **Cloud Firestore**: v5.0.0+ (supports both v5.x and v6.x)
 - **Enhanced Error Handling**: Added graceful handling for Firebase initialization errors
 - **Test Environment Support**: Improved handling in test environments with Firebase error catching
 
 ### Changed
-- **Updated Dependencies**: All Firebase packages updated to latest versions
-  - `cloud_firestore`: `^5.1.0` → `^6.0.0`
-  - `firebase_core`: `^3.0.0` → `^4.0.0`
+- **Updated Dependencies**: Firebase packages updated to support multiple versions
+  - `cloud_firestore`: `^5.0.0` (supports v5.x and v6.x)
+  - `firebase_core`: `^3.0.0` (supports v3.x and v4.x)
   - `package_info_plus`: `^8.0.0` → `^8.3.0`
   - `url_launcher`: `^6.3.0` → `^6.3.2`
   - `flutter_lints`: `^5.0.0` → `^6.0.0`
@@ -45,9 +47,13 @@ AppUpdateManager(
 **Firebase Compatibility:**
 ```yaml
 dependencies:
-  firebase_core: ^4.0.0
-  cloud_firestore: ^6.0.0
+  firebase_core: ^3.0.0
+  cloud_firestore: ^5.0.0
 ```
+
+**Version Support:**
+- **Firebase Core**: v3.0.0+ (supports both v3.x and v4.x)
+- **Cloud Firestore**: v5.0.0+ (supports both v5.x and v6.x)
 
 ## [0.1.0] - 2024-01-XX
 
