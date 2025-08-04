@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 /// This screen provides a user-friendly interface for:
 /// - Managing version configurations for Android and iOS
 /// - Setting force update flags
-/// - Adding/removing discontinued versions
+/// - Adding/removing versions
 /// - Configuring app store URLs
 /// 
 /// ## Features:

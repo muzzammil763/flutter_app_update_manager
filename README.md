@@ -10,7 +10,6 @@ A powerful Flutter package to easily manage in-app updates using Firebase Firest
 *   **Customizable Update Dialog**: Easily customize the update dialog to match your app's UI.
 *   **Force and Optional Updates**: Configure updates to be either mandatory (force update) or optional.
 *   **Platform-Specific Configuration**: Separate update configurations for Android and iOS.
-*   **Discontinued Versions Support**: Notify users of discontinued app versions and prompt them to update.
 *   **Auto Setup**: Automatically create Firestore structure with a single parameter.
 *   **Modern Dialog Design**: Beautiful blur background with proper force update handling.
 *   **Management Screen**: Built-in screen for managing update configurations.
@@ -127,8 +126,8 @@ Future<void> checkForUpdate()
 - Fetches current app version using `package_info_plus`
 - Detects platform (Android/iOS) automatically
 - Queries Firestore for available versions
-- Shows update dialog if newer version is found
-- Handles force updates and discontinued versions
+- Shows update dialog if exact version match is found
+- Handles force updates and optional updates
 - Launches store URL when user chooses to update
 
 ### DialogStyle Enum
@@ -298,8 +297,7 @@ Create a collection named `AppUpdateManager` with documents for each platform:
       "version": "0.0.2+1",
       "forceUpdate": false
     }
-  ],
-  "discontinuedVersions": ["0.0.1+1"]
+  ]
 }
 ```
 
@@ -435,17 +433,14 @@ Example Firestore update:
   "versions": [
     {
       "version": "1.0.0",
-      "isDiscontinued": true,
       "forceUpdate": true
     },
     {
       "version": "1.1.0",
-      "isDiscontinued": false,
       "forceUpdate": false
     },
     {
       "version": "1.2.0",
-      "isDiscontinued": false,
       "forceUpdate": false
     }
   ]
@@ -579,3 +574,28 @@ AppUpdateManager(
   customDialog: MyCustomDialog(),
 ).checkForUpdate();
 ```
+
+## Additional Information
+
+*   **Contributing**: Contributions are welcome! Please feel free to submit a pull request.
+*   **Issues**: If you find any issues or have a feature request, please file an issue on our [GitHub repository](https://github.com/your-repo-link).
+*   **License**: This package is licensed under the MIT License.
+
+---
+
+## Author
+
+<div align="center">
+  <img src="https://avatars.githubusercontent.com/u/150317959?v=4" alt="Muzamil Ghafoor's GitHub Profile" width="100" style="border-radius: 50%;"/>
+  
+  **Muzamil Ghafoor**
+  
+  Flutter Developer | Passionate About Crafting Seamless Apps With Flutter & Dart
+  
+  [![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/muzzammil763)
+  [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/muzamil-ghafoor-181840344?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app)
+  
+  ![GitHub Stats](https://github-readme-stats.vercel.app/api?username=muzzammil763&show_icons=true&theme=radical)
+  
+  ![GitHub Streak](https://streak-stats.demolab.com/?user=muzzammil763&theme=radical)
+</div>
