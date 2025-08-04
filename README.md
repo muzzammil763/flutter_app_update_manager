@@ -127,7 +127,7 @@ Add this to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_app_update_manager: ^0.1.6
+  flutter_app_update_manager: ^0.1.5
 ```
 
 ### Firebase Compatibility

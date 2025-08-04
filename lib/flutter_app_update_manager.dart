@@ -1,29 +1,30 @@
 library flutter_app_update_manager;
 
+import 'dart:ui'; // Added for ImageFilter
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:ui'; // Added for ImageFilter
 
 // Export the management screen
 export 'app_update_manager_screen.dart';
 
 /// Custom colors for the default dialog.
-/// 
+///
 /// Use this class to customize the colors of the default dialog.
 class DefaultDialogColors {
   /// The color for text buttons (Later, Update Now).
   final Color? buttonColor;
-  
+
   /// The color for the dialog text content.
   final Color? textColor;
-  
+
   /// The color for the dialog title.
   final Color? titleColor;
 
   /// Creates DefaultDialogColors instance.
-  /// 
+  ///
   /// [buttonColor] - Color for text buttons (optional)
   /// [textColor] - Color for dialog text content (optional)
   /// [titleColor] - Color for dialog title (optional)
@@ -35,12 +36,12 @@ class DefaultDialogColors {
 }
 
 /// Abstract interface for creating custom update dialogs.
-/// 
+///
 /// Implement this interface to create your own beautiful update dialogs
 /// with full control over design and behavior.
 abstract class CustomUpdateDialog {
   /// Builds the custom update dialog widget.
-  /// 
+  ///
   /// [context] - Build context for navigation and theme access
   /// [isForceUpdate] - True when update is mandatory (hide "Later" button)
   /// [appName] - The app name to display in the dialog
@@ -56,17 +57,17 @@ abstract class CustomUpdateDialog {
 }
 
 /// Main class for managing app updates with Firebase Firestore integration.
-/// 
+///
 /// This class provides a complete solution for in-app update management,
 /// including version checking, dialog display, and store URL launching.
-/// 
+///
 /// ## Features:
 /// - Automatic version comparison with Firestore
 /// - Default dialog style with blur background
 /// - Force update handling
 /// - Platform-specific store URL generation
 /// - Auto setup for first-time configuration
-/// 
+///
 /// ## Example:
 /// ```dart
 /// AppUpdateManager(
@@ -76,48 +77,48 @@ abstract class CustomUpdateDialog {
 /// ```
 class AppUpdateManager {
   /// The build context used for showing dialogs and detecting platform.
-  /// 
+  ///
   /// Must be a valid context from a MaterialApp widget tree.
   final BuildContext context;
-  
+
   /// App name to display in update dialogs.
-  /// 
+  ///
   /// Falls back to "App" if not provided.
   /// Example: "MyApp"
   final String? appName;
-  
+
   /// Whether to show the "Later" button for optional updates.
-  /// 
+  ///
   /// When true, users can dismiss non-force updates.
   /// When false, only "Update Now" button is shown.
   /// Defaults to false for force updates.
   final bool? showLaterButton;
-  
+
   /// Firebase Firestore instance for version management.
-  /// 
+  ///
   /// Uses FirebaseFirestore.instance by default.
   /// Can be customized for testing or different environments.
   final FirebaseFirestore firestore;
-  
+
   /// Auto setup flag for creating Firestore structure.
-  /// 
+  ///
   /// When true, creates the required Firestore collection and documents
   /// with sample data. ⚠️ Set to false after first run to prevent data overwrites.
   final bool autoSetup;
 
   /// Custom dialog implementation.
-  /// 
+  ///
   /// When provided, uses custom dialog instead of default dialog.
   /// Implement CustomUpdateDialog interface to create your own dialog.
   final CustomUpdateDialog? customDialog;
 
   /// Custom colors for the default dialog.
-  /// 
+  ///
   /// When provided, overrides the default colors in the default dialog.
   final DefaultDialogColors? dialogColors;
 
   /// Creates an AppUpdateManager instance.
-  /// 
+  ///
   /// [context] - The build context (required)
   /// [appName] - App name for dialogs (optional, defaults to "App")
   /// [showLaterButton] - Show "Later" button for optional updates (optional, defaults to false)
@@ -149,7 +150,7 @@ class AppUpdateManager {
   /// Expects a collection named 'AppUpdateManager' with documents for each platform:
   /// - Document 'Android' for Android platform
   /// - Document 'Ios' for iOS platform
-  /// 
+  ///
   /// Each document should contain:
   /// - `androidId` and `iosId` fields (for store URLs)
   /// - `versions` array with version objects
@@ -187,10 +188,12 @@ class AppUpdateManager {
     try {
       // Check if Firebase is properly initialized
       if (firestore == null) {
-        debugPrint('AppUpdateManager: Firebase not initialized, skipping update check');
+        debugPrint(
+          'AppUpdateManager: Firebase not initialized, skipping update check',
+        );
         return;
       }
-      
+
       final doc = await firestore
           .collection('AppUpdateManager')
           .doc(platform)
@@ -368,22 +371,16 @@ class AppUpdateManager {
       await collection.doc('Android').set({
         'androidId': 'com.example.myapp',
         'versions': [
-          {
-            'version': '0.0.1+1',
-            'forceUpdate': true
-          }
-        ]
+          {'version': '0.0.1+1', 'forceUpdate': true},
+        ],
       });
-      
+
       // Setup for iOS
       await collection.doc('Ios').set({
         'iosId': '123456789',
         'versions': [
-          {
-            'version': '0.0.1+1',
-            'forceUpdate': true
-          }
-        ]
+          {'version': '0.0.1+1', 'forceUpdate': true},
+        ],
       });
 
       debugPrint('AppUpdateManager: Firestore structure created successfully!');
@@ -416,27 +413,31 @@ class AppUpdateManager {
   /// - Verifies MaterialApp ancestor exists
   /// - Skips dialog if validation fails
   void _showUpdateDialog({required bool isForceUpdate}) {
-    debugPrint('AppUpdateManager: _showUpdateDialog called with isForceUpdate: $isForceUpdate');
-    
+    debugPrint(
+      'AppUpdateManager: _showUpdateDialog called with isForceUpdate: $isForceUpdate',
+    );
+
     // Check if context is still valid and mounted
     if (!context.mounted) {
       debugPrint('AppUpdateManager: Context is not mounted, skipping dialog');
       return;
     }
-    
+
     // Check if we have MaterialApp ancestor
     final materialApp = context.findAncestorWidgetOfExactType<MaterialApp>();
     if (materialApp == null) {
-      debugPrint('AppUpdateManager: No MaterialApp found in widget tree, skipping dialog');
+      debugPrint(
+        'AppUpdateManager: No MaterialApp found in widget tree, skipping dialog',
+      );
       return;
     }
-    
+
     showDialog(
       context: context,
       barrierDismissible: !isForceUpdate,
       builder: (BuildContext context) {
         debugPrint('AppUpdateManager: Building dialog...');
-        
+
         // Use custom dialog if provided
         if (customDialog != null) {
           return customDialog!.build(
@@ -447,12 +448,14 @@ class AppUpdateManager {
               Navigator.of(context).pop();
               _launchURL();
             },
-            onLater: isForceUpdate ? null : () {
-              Navigator.of(context).pop();
-            },
+            onLater: isForceUpdate
+                ? null
+                : () {
+                    Navigator.of(context).pop();
+                  },
           );
         }
-        
+
         // Use default dialog
         return BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
@@ -464,35 +467,39 @@ class AppUpdateManager {
             child: AlertDialog(
               title: Text(
                 'Update Available',
-                style: dialogColors?.titleColor != null 
+                style: dialogColors?.titleColor != null
                     ? TextStyle(color: dialogColors!.titleColor)
                     : null,
               ),
               content: Text(
                 'A new version of ${appName ?? "the app"} is available. Please update to the latest version.',
-                style: dialogColors?.textColor != null 
+                style: dialogColors?.textColor != null
                     ? TextStyle(color: dialogColors!.textColor)
                     : null,
               ),
               actions: <Widget>[
                 if (showLaterButton == true && !isForceUpdate)
                   TextButton(
-                    child: Text('Later'),
-                    style: dialogColors?.buttonColor != null 
-                        ? TextButton.styleFrom(foregroundColor: dialogColors!.buttonColor)
+                    style: dialogColors?.buttonColor != null
+                        ? TextButton.styleFrom(
+                            foregroundColor: dialogColors!.buttonColor,
+                          )
                         : null,
                     onPressed: () {
                       Navigator.of(context).pop();
                     },
+                    child: Text('Later'),
                   ),
                 TextButton(
-                  child: Text('Update Now'),
-                  style: dialogColors?.buttonColor != null 
-                      ? TextButton.styleFrom(foregroundColor: dialogColors!.buttonColor)
+                  style: dialogColors?.buttonColor != null
+                      ? TextButton.styleFrom(
+                          foregroundColor: dialogColors!.buttonColor,
+                        )
                       : null,
                   onPressed: () {
                     _launchURL();
                   },
+                  child: Text('Update Now'),
                 ),
               ],
             ),
@@ -503,17 +510,17 @@ class AppUpdateManager {
   }
 
   /// Launches the appropriate store URL based on platform and app IDs from Firestore.
-  /// 
+  ///
   /// [androidId] - Android package ID for Play Store URL (optional, uses Firestore if not provided)
   /// [iosId] - iOS App Store ID for App Store URL (optional, uses Firestore if not provided)
-  /// 
+  ///
   /// ## URL Generation:
   /// - **Android**: `https://play.google.com/store/apps/details?id={androidId}`
   /// - **iOS**: `https://apps.apple.com/app/id{iosId}`
-  /// 
+  ///
   /// ## Platform Detection:
   /// Uses `Theme.of(context).platform` to detect Android or iOS
-  /// 
+  ///
   /// ## Throws:
   /// Throws exception if URL cannot be launched or if app IDs are missing
   Future<void> _launchURL({String? androidId, String? iosId}) async {
@@ -523,24 +530,32 @@ class AppUpdateManager {
     // If app IDs not provided, fetch from Firestore
     String? finalAndroidId = androidId;
     String? finalIosId = iosId;
-    
+
     if (finalAndroidId == null || finalIosId == null) {
       try {
-        final platformDoc = Theme.of(context).platform == TargetPlatform.android ? 'Android' : 'Ios';
-        final doc = await firestore.collection('AppUpdateManager').doc(platformDoc).get();
-        
+        final platformDoc = Theme.of(context).platform == TargetPlatform.android
+            ? 'Android'
+            : 'Ios';
+        final doc = await firestore
+            .collection('AppUpdateManager')
+            .doc(platformDoc)
+            .get();
+
         if (doc.exists) {
           final data = doc.data() as Map<String, dynamic>;
           finalAndroidId = finalAndroidId ?? data['androidId'] as String?;
           finalIosId = finalIosId ?? data['iosId'] as String?;
         }
       } catch (e) {
-        debugPrint('AppUpdateManager: Error fetching app IDs from Firestore: $e');
+        debugPrint(
+          'AppUpdateManager: Error fetching app IDs from Firestore: $e',
+        );
       }
     }
 
     if (platform == TargetPlatform.android) {
-      url = 'https://play.google.com/store/apps/details?id=${finalAndroidId ?? 'com.example.myapp'}';
+      url =
+          'https://play.google.com/store/apps/details?id=${finalAndroidId ?? 'com.example.myapp'}';
     } else if (platform == TargetPlatform.iOS) {
       url = 'https://apps.apple.com/app/id${finalIosId ?? '123456789'}';
     }

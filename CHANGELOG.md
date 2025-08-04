@@ -1,5 +1,54 @@
 # Changelog
 
+## [0.1.5] - 2024-12-19
+
+### Added
+- **Default Dialog Color Customization**: Added `DefaultDialogColors` class for customizing default dialog colors
+  - `buttonColor`: Customize text button colors (Later, Update Now)
+  - `textColor`: Customize dialog content text color
+  - `titleColor`: Customize dialog title color
+- **Latest Firebase Compatibility**: Updated to work with Firebase v6.0.0+ and Firebase Core v4.0.0+
+- **Enhanced Error Handling**: Added graceful handling for Firebase initialization errors
+- **Test Environment Support**: Improved handling in test environments with Firebase error catching
+
+### Changed
+- **Updated Dependencies**: All Firebase packages updated to latest versions
+  - `cloud_firestore`: `^5.1.0` → `^6.0.0`
+  - `firebase_core`: `^3.0.0` → `^4.0.0`
+  - `package_info_plus`: `^8.0.0` → `^8.3.0`
+  - `url_launcher`: `^6.3.0` → `^6.3.2`
+  - `flutter_lints`: `^5.0.0` → `^6.0.0`
+- **Example App Enhancements**: Added color customization demo and improved error handling
+- **Documentation Updates**: Added Firebase compatibility section and usage examples
+
+### Fixed
+- **Firebase Initialization**: Fixed Firebase initialization errors in test environments
+- **Error Handling**: Improved error handling for Firebase operations
+- **Test Compatibility**: Fixed test failures due to Firebase initialization issues
+
+### Usage Examples
+
+**Basic Usage with Custom Colors:**
+```dart
+AppUpdateManager(
+  context: context,
+  appName: "MyApp",
+  showLaterButton: true,
+  dialogColors: DefaultDialogColors(
+    buttonColor: Colors.blue,
+    textColor: Colors.grey[700],
+    titleColor: Colors.black87,
+  ),
+).checkForUpdate();
+```
+
+**Firebase Compatibility:**
+```yaml
+dependencies:
+  firebase_core: ^4.0.0
+  cloud_firestore: ^6.0.0
+```
+
 ## [0.1.0] - 2024-01-XX
 
 ### Added
