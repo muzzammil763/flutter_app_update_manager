@@ -6,14 +6,26 @@ A powerful Flutter package to easily manage in-app updates using Firebase Firest
 
 ## Features
 
-- ✅ **Multiple Dialog Styles**: Choose from default, modern, material, or custom dialogs
-- ✅ **Custom Dialog Support**: Create your own beautiful update dialogs
-- ✅ **App Name Customization**: Display your app name in update dialogs
-- ✅ **Force Update Handling**: Automatically hide "Later" button for force updates
-- ✅ **Firebase Firestore Integration**: Manage versions through Firestore
-- ✅ **Auto Setup**: Easy first-time setup with sample data
-- ✅ **Platform Support**: Works on Android and iOS
-- ✅ **Smart URL Generation**: Automatically generates store URLs from app IDs
+*   **Automatic Update Checks**: Automatically checks for new app versions from Firebase Firestore.
+*   **Customizable Update Dialog**: Easily customize the update dialog to match your app's UI.
+*   **Force and Optional Updates**: Configure updates to be either mandatory (force update) or optional.
+*   **Platform-Specific Configuration**: Separate update configurations for Android and iOS.
+*   **Discontinued Versions Support**: Notify users of discontinued app versions and prompt them to update.
+*   **Auto Setup**: Automatically create Firestore structure with a single parameter.
+*   **Modern Dialog Design**: Beautiful blur background with proper force update handling.
+*   **Management Screen**: Built-in screen for managing update configurations.
+
+## Screenshots
+
+### Dialog Styles
+
+| Default Dialog | Modern Dialog |
+|----------------|---------------|
+| ![Default Dialog](Screenshots/default_dialog.png) | ![Modern Dialog](Screenshots/modern_dialog.png) |
+
+| Material Dialog | Custom Dialog |
+|-----------------|---------------|
+| ![Material Dialog](Screenshots/material_dialog.png) | ![Custom Dialog](Screenshots/custom_dialog.png) |
 
 ## Installation
 
@@ -21,7 +33,7 @@ Add this to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_app_update_manager: ^0.0.3
+  flutter_app_update_manager: ^0.1.1
 ```
 
 ## Quick Start
@@ -169,9 +181,13 @@ abstract class CustomUpdateDialog {
 #### Implementation Example
 
 ```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_app_update_manager/flutter_app_update_manager.dart';
+
 class MyCustomDialog implements CustomUpdateDialog {
   @override
-  Widget build(BuildContext context, {
+  Widget build(
+    BuildContext context, {
     required bool isForceUpdate,
     required String appName,
     required VoidCallback onUpdate,
@@ -182,31 +198,32 @@ class MyCustomDialog implements CustomUpdateDialog {
         padding: EdgeInsets.all(24),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [Colors.blue.shade50, Colors.purple.shade50],
-          ),
+          gradient: LinearGradient(colors: [Colors.blue, Colors.purple]),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.rocket_launch, size: 48, color: Colors.blue.shade700),
+            Icon(Icons.rocket_launch, size: 48, color: Colors.white),
             SizedBox(height: 16),
             Text(
               '🚀 New Version Available!',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 8),
-            RichText(
-              textAlign: TextAlign.center,
-              text: TextSpan(
-                children: [
-                  TextSpan(text: 'A new version of '),
-                  TextSpan(
-                    text: appName,
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  TextSpan(text: ' is available!'),
-                ],
+            Align(
+              alignment: Alignment.centerLeft,
+              child: RichText(
+                textAlign: TextAlign.start,
+                text: TextSpan(
+                  children: [
+                    TextSpan(text: 'A new version of '),
+                    TextSpan(
+                      text: appName,
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    TextSpan(text: ' is available!'),
+                  ],
+                ),
               ),
             ),
             SizedBox(height: 24),
@@ -215,14 +232,14 @@ class MyCustomDialog implements CustomUpdateDialog {
                 if (!isForceUpdate && onLater != null)
                   Expanded(
                     child: OutlinedButton(
-                      child: Text('Maybe Later'),
                       onPressed: onLater,
+                      child: Text('Maybe Later'),
                     ),
                   ),
                 Expanded(
                   child: ElevatedButton(
-                    child: Text('Update Now'),
                     onPressed: onUpdate,
+                    child: Text('Update Now'),
                   ),
                 ),
               ],
@@ -354,13 +371,6 @@ The example app demonstrates:
 - App name customization
 - Force update scenarios
 
-## Screenshots
-
-![Default Dialog](https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Default+Dialog)
-![Modern Dialog](https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Modern+Dialog)
-![Material Dialog](https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Material+Dialog)
-![Custom Dialog](https://via.placeholder.com/300x200/4A90E2/FFFFFF?text=Custom+Dialog)
-
 ## Getting Started Guide
 
 ### Step 1: Initial Setup
@@ -400,7 +410,7 @@ class _MyHomePageState extends State<MyHomePage> {
       context: context,
       androidId: 'com.example.myapp',
       iosId: '123456789',
-      appName: "XTREM",
+      appName: "App Name",
       autoSetup: true, // ⚠️ Set to false after first run
     ).checkForUpdate();
   }
@@ -409,7 +419,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('My App')),
-      body: Center(child: Text('Welcome to XTREM!')),
+      body: Center(child: Text('Welcome To My App')),
     );
   }
 }
@@ -455,6 +465,46 @@ Example Firestore update:
   ]
 }
 ```
+
+### Implementation
+
+In your app, import the package and initialize the `AppUpdateManager` in your `initState` or any other suitable place:
+
+```dart
+import 'package:flutter_app_update_manager/flutter_app_update_manager.dart';
+
+@override
+void initState() {
+  super.initState();
+  AppUpdateManager(
+    context: context,
+    androidId: 'your.android.app.id',
+    iosId: 'your.ios.app.id',
+    autoSetup: true, // Remove this after first run
+  ).checkForUpdate();
+}
+```
+
+### Management Screen
+
+The package includes a built-in management screen for configuring update settings:
+
+```dart
+// Navigate to the management screen
+Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => AppUpdateManagerScreen(),
+  ),
+);
+```
+
+The management screen provides:
+- **Platform-specific tabs** (Android/iOS)
+- **Version management** with force update controls
+- **App store URL configuration**
+- **Real-time Firestore synchronization**
+- **Modern UI** with smooth animations
 
 ## Contributing
 

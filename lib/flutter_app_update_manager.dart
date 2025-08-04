@@ -4,6 +4,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:ui'; // Added for ImageFilter
+
+// Export the management screen
+export 'app_update_manager_screen.dart';
 
 /// Dialog style options for update notifications.
 /// 
@@ -88,6 +92,13 @@ class AppUpdateManager {
   /// Example: "MyApp"
   final String? appName;
   
+  /// Whether to show the "Later" button for optional updates.
+  /// 
+  /// When true, users can dismiss non-force updates.
+  /// When false, only "Update Now" button is shown.
+  /// Defaults to false for force updates.
+  final bool? showLaterButton;
+  
   /// Firebase Firestore instance for version management.
   /// 
   /// Uses FirebaseFirestore.instance by default.
@@ -117,6 +128,7 @@ class AppUpdateManager {
   /// [androidId] - Android package ID (optional, can be set in Firestore)
   /// [iosId] - iOS App Store ID (optional, can be set in Firestore)
   /// [appName] - App name for dialogs (optional, defaults to "App")
+  /// [showLaterButton] - Show "Later" button for optional updates (optional, defaults to false)
   /// [firestore] - Custom Firestore instance (optional, uses default)
   /// [autoSetup] - Auto create Firestore structure (optional, defaults to false)
   /// [dialogStyle] - Dialog appearance (optional, defaults to defaultStyle)
@@ -126,6 +138,7 @@ class AppUpdateManager {
     this.androidId,
     this.iosId,
     this.appName,
+    this.showLaterButton,
     FirebaseFirestore? firestore,
     this.autoSetup = false,
     this.dialogStyle = DialogStyle.defaultStyle,
@@ -231,7 +244,7 @@ class AppUpdateManager {
           }
           
           if (shouldShowDialog) {
-            _showUpdateDialog(isForceUpdate: isForceUpdate, androidId: firestoreAndroidId, iosId: firestoreIosId);
+            _showUpdateDialog(isForceUpdate: isForceUpdate);
             return;
           }
           
@@ -251,7 +264,7 @@ class AppUpdateManager {
 
         if (discontinuedVersions.contains(currentVersion)) {
           debugPrint('AppUpdateManager: Current version is discontinued, showing force update dialog');
-          _showUpdateDialog(isForceUpdate: true, androidId: firestoreAndroidId, iosId: firestoreIosId);
+          _showUpdateDialog(isForceUpdate: true);
           return;
         }
 
@@ -265,7 +278,7 @@ class AppUpdateManager {
           
           if (firestoreVersionWithoutBuild != currentVersionWithoutBuild) {
             debugPrint('AppUpdateManager: Newer version found, showing update dialog');
-            _showUpdateDialog(isForceUpdate: versionData['forceUpdate'], androidId: firestoreAndroidId, iosId: firestoreIosId);
+            _showUpdateDialog(isForceUpdate: versionData['forceUpdate']);
             break;
           }
         }
@@ -374,7 +387,7 @@ class AppUpdateManager {
   /// - Checks if context is still mounted
   /// - Verifies MaterialApp ancestor exists
   /// - Skips dialog if validation fails
-  void _showUpdateDialog({required bool isForceUpdate, String? androidId, String? iosId}) {
+  void _showUpdateDialog({required bool isForceUpdate}) {
     debugPrint('AppUpdateManager: _showUpdateDialog called with isForceUpdate: $isForceUpdate');
     
     // Check if context is still valid and mounted
@@ -395,34 +408,100 @@ class AppUpdateManager {
       barrierDismissible: !isForceUpdate,
       builder: (BuildContext context) {
         debugPrint('AppUpdateManager: Building dialog...');
-        
-        // Use custom dialog if provided
-        if (dialogStyle == DialogStyle.custom && customDialog != null) {
-          return customDialog!.build(
-            context,
-            isForceUpdate: isForceUpdate,
-            appName: appName ?? 'App',
-            onUpdate: () {
-              Navigator.of(context).pop();
-              _launchURL(androidId: androidId, iosId: iosId);
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: WillPopScope(
+            onWillPop: () async {
+              // Prevent back button from closing force update dialogs
+              return !isForceUpdate;
             },
-            onLater: isForceUpdate ? null : () {
-              Navigator.of(context).pop();
-            },
-          );
-        }
-        
-        // Use predefined dialog styles
-        switch (dialogStyle) {
-          case DialogStyle.defaultStyle:
-            return _buildDefaultDialog(context, isForceUpdate);
-          case DialogStyle.modernStyle:
-            return _buildModernDialog(context, isForceUpdate);
-          case DialogStyle.materialStyle:
-            return _buildMaterialDialog(context, isForceUpdate);
-          case DialogStyle.custom:
-            return _buildDefaultDialog(context, isForceUpdate);
-        }
+            child: Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.system_update,
+                        color: Colors.blue,
+                        size: 28,
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Update Available',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'A new version of ${appName ?? "the app"} is available. Please update to the latest version.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                    Row(
+                      children: [
+                        if (showLaterButton == true && !isForceUpdate)
+                          Expanded(
+                            child: TextButton(
+                              child: Text('Later'),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                          ),
+                        if (showLaterButton == true && !isForceUpdate)
+                          SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            child: Text('Update Now'),
+                            onPressed: () {
+                              _launchURL();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
       },
     );
   }
