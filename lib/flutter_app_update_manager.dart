@@ -1,39 +1,46 @@
 library flutter_app_update_manager;
 
-import 'dart:ui'; // Added for ImageFilter
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:ui'; // Added for ImageFilter
 
 // Export the management screen
 export 'app_update_manager_screen.dart';
 
-/// Dialog style options for update notifications.
-///
-/// Choose from predefined styles or implement your own custom dialog.
-enum DialogStyle {
-  /// Classic AlertDialog with clean design and standard Material Design buttons.
-  defaultStyle,
+/// Custom colors for the default dialog.
+/// 
+/// Use this class to customize the colors of the default dialog.
+class DefaultDialogColors {
+  /// The color for text buttons (Later, Update Now).
+  final Color? buttonColor;
+  
+  /// The color for the dialog text content.
+  final Color? textColor;
+  
+  /// The color for the dialog title.
+  final Color? titleColor;
 
-  /// Modern rounded dialog with icons, enhanced typography, and improved spacing.
-  modernStyle,
-
-  /// Material Design 3 inspired style with gradient backgrounds and modern visuals.
-  materialStyle,
-
-  /// Custom dialog implementation - use your own dialog widget.
-  custom,
+  /// Creates DefaultDialogColors instance.
+  /// 
+  /// [buttonColor] - Color for text buttons (optional)
+  /// [textColor] - Color for dialog text content (optional)
+  /// [titleColor] - Color for dialog title (optional)
+  const DefaultDialogColors({
+    this.buttonColor,
+    this.textColor,
+    this.titleColor,
+  });
 }
 
 /// Abstract interface for creating custom update dialogs.
-///
+/// 
 /// Implement this interface to create your own beautiful update dialogs
 /// with full control over design and behavior.
 abstract class CustomUpdateDialog {
   /// Builds the custom update dialog widget.
-  ///
+  /// 
   /// [context] - Build context for navigation and theme access
   /// [isForceUpdate] - True when update is mandatory (hide "Later" button)
   /// [appName] - The app name to display in the dialog
@@ -49,33 +56,30 @@ abstract class CustomUpdateDialog {
 }
 
 /// Main class for managing app updates with Firebase Firestore integration.
-///
+/// 
 /// This class provides a complete solution for in-app update management,
 /// including version checking, dialog display, and store URL launching.
-///
+/// 
 /// ## Features:
 /// - Automatic version comparison with Firestore
-/// - Multiple dialog styles (default, modern, material, custom)
+/// - Default dialog style with blur background
 /// - Force update handling
 /// - Platform-specific store URL generation
 /// - Auto setup for first-time configuration
-///
+/// 
 /// ## Example:
 /// ```dart
 /// AppUpdateManager(
 ///   context: context,
-///   androidId: 'com.example.myapp',
-///   iosId: '123456789',
 ///   appName: "MyApp",
-///   dialogStyle: DialogStyle.modernStyle,
 /// ).checkForUpdate();
 /// ```
 class AppUpdateManager {
   /// The build context used for showing dialogs and detecting platform.
-  ///
+  /// 
   /// Must be a valid context from a MaterialApp widget tree.
   final BuildContext context;
-
+  
   /// App name to display in update dialogs.
   /// 
   /// Falls back to "App" if not provided.
@@ -94,23 +98,23 @@ class AppUpdateManager {
   /// Uses FirebaseFirestore.instance by default.
   /// Can be customized for testing or different environments.
   final FirebaseFirestore firestore;
-
+  
   /// Auto setup flag for creating Firestore structure.
-  ///
+  /// 
   /// When true, creates the required Firestore collection and documents
   /// with sample data. ⚠️ Set to false after first run to prevent data overwrites.
   final bool autoSetup;
 
-  /// Dialog style for update notifications.
-  ///
-  /// Choose from predefined styles or use DialogStyle.custom with a custom dialog.
-  final DialogStyle dialogStyle;
-
   /// Custom dialog implementation.
-  ///
-  /// Required when dialogStyle is DialogStyle.custom.
+  /// 
+  /// When provided, uses custom dialog instead of default dialog.
   /// Implement CustomUpdateDialog interface to create your own dialog.
   final CustomUpdateDialog? customDialog;
+
+  /// Custom colors for the default dialog.
+  /// 
+  /// When provided, overrides the default colors in the default dialog.
+  final DefaultDialogColors? dialogColors;
 
   /// Creates an AppUpdateManager instance.
   /// 
@@ -119,16 +123,16 @@ class AppUpdateManager {
   /// [showLaterButton] - Show "Later" button for optional updates (optional, defaults to false)
   /// [firestore] - Custom Firestore instance (optional, uses default)
   /// [autoSetup] - Auto create Firestore structure (optional, defaults to false)
-  /// [dialogStyle] - Dialog appearance (optional, defaults to defaultStyle)
-  /// [customDialog] - Custom dialog implementation (optional, required for custom style)
+  /// [customDialog] - Custom dialog implementation (optional)
+  /// [dialogColors] - Custom colors for default dialog (optional)
   AppUpdateManager({
     required this.context,
     this.appName,
     this.showLaterButton,
     FirebaseFirestore? firestore,
     this.autoSetup = false,
-    this.dialogStyle = DialogStyle.defaultStyle,
     this.customDialog,
+    this.dialogColors,
   }) : firestore = firestore ?? FirebaseFirestore.instance;
 
   /// Checks for available updates by comparing current app version with Firestore.
@@ -145,9 +149,9 @@ class AppUpdateManager {
   /// Expects a collection named 'AppUpdateManager' with documents for each platform:
   /// - Document 'Android' for Android platform
   /// - Document 'Ios' for iOS platform
-  ///
+  /// 
   /// Each document should contain:
-  /// - `androidId` and `iosId` fields (optional, can be set in code)
+  /// - `androidId` and `iosId` fields (for store URLs)
   /// - `versions` array with version objects
   ///
   /// Version object structure:
@@ -181,6 +185,12 @@ class AppUpdateManager {
     debugPrint('AppUpdateManager: Platform detected: $platform');
 
     try {
+      // Check if Firebase is properly initialized
+      if (firestore == null) {
+        debugPrint('AppUpdateManager: Firebase not initialized, skipping update check');
+        return;
+      }
+      
       final doc = await firestore
           .collection('AppUpdateManager')
           .doc(platform)
@@ -336,16 +346,11 @@ class AppUpdateManager {
   /// ## Firestore Structure Created:
   /// ```json
   /// {
-  ///   "androidId": "",
-  ///   "iosId": "",
+  ///   "androidId": "com.example.myapp",
   ///   "versions": [
   ///     {
   ///       "version": "0.0.1+1",
   ///       "forceUpdate": true
-  ///     },
-  ///     {
-  ///       "version": "0.0.2+1",
-  ///       "forceUpdate": false
   ///     }
   ///   ]
   /// }
@@ -411,33 +416,29 @@ class AppUpdateManager {
   /// - Verifies MaterialApp ancestor exists
   /// - Skips dialog if validation fails
   void _showUpdateDialog({required bool isForceUpdate}) {
-    debugPrint(
-      'AppUpdateManager: _showUpdateDialog called with isForceUpdate: $isForceUpdate',
-    );
-
+    debugPrint('AppUpdateManager: _showUpdateDialog called with isForceUpdate: $isForceUpdate');
+    
     // Check if context is still valid and mounted
     if (!context.mounted) {
       debugPrint('AppUpdateManager: Context is not mounted, skipping dialog');
       return;
     }
-
+    
     // Check if we have MaterialApp ancestor
     final materialApp = context.findAncestorWidgetOfExactType<MaterialApp>();
     if (materialApp == null) {
-      debugPrint(
-        'AppUpdateManager: No MaterialApp found in widget tree, skipping dialog',
-      );
+      debugPrint('AppUpdateManager: No MaterialApp found in widget tree, skipping dialog');
       return;
     }
-
+    
     showDialog(
       context: context,
       barrierDismissible: !isForceUpdate,
       builder: (BuildContext context) {
         debugPrint('AppUpdateManager: Building dialog...');
-
+        
         // Use custom dialog if provided
-        if (dialogStyle == DialogStyle.custom && customDialog != null) {
+        if (customDialog != null) {
           return customDialog!.build(
             context,
             isForceUpdate: isForceUpdate,
@@ -446,302 +447,105 @@ class AppUpdateManager {
               Navigator.of(context).pop();
               _launchURL();
             },
-            onLater: isForceUpdate
-                ? null
-                : () {
-                    Navigator.of(context).pop();
-                  },
+            onLater: isForceUpdate ? null : () {
+              Navigator.of(context).pop();
+            },
           );
         }
-
-        // Use predefined dialog styles
-        switch (dialogStyle) {
-          case DialogStyle.defaultStyle:
-            return _buildDefaultDialog(context, isForceUpdate);
-          case DialogStyle.modernStyle:
-            return _buildModernDialog(context, isForceUpdate);
-          case DialogStyle.materialStyle:
-            return _buildMaterialDialog(context, isForceUpdate);
-          case DialogStyle.custom:
-            return _buildDefaultDialog(context, isForceUpdate);
-        }
+        
+        // Use default dialog
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: WillPopScope(
+            onWillPop: () async {
+              // Prevent back button from closing force update dialogs
+              return !isForceUpdate;
+            },
+            child: AlertDialog(
+              title: Text(
+                'Update Available',
+                style: dialogColors?.titleColor != null 
+                    ? TextStyle(color: dialogColors!.titleColor)
+                    : null,
+              ),
+              content: Text(
+                'A new version of ${appName ?? "the app"} is available. Please update to the latest version.',
+                style: dialogColors?.textColor != null 
+                    ? TextStyle(color: dialogColors!.textColor)
+                    : null,
+              ),
+              actions: <Widget>[
+                if (showLaterButton == true && !isForceUpdate)
+                  TextButton(
+                    child: Text('Later'),
+                    style: dialogColors?.buttonColor != null 
+                        ? TextButton.styleFrom(foregroundColor: dialogColors!.buttonColor)
+                        : null,
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                TextButton(
+                  child: Text('Update Now'),
+                  style: dialogColors?.buttonColor != null 
+                      ? TextButton.styleFrom(foregroundColor: dialogColors!.buttonColor)
+                      : null,
+                  onPressed: () {
+                    _launchURL();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
       },
     );
   }
 
-  /// Builds the default dialog style - classic AlertDialog with clean design.
-  ///
-  /// [context] - Build context for the dialog
-  /// [isForceUpdate] - Whether this is a force update (hides "Later" button)
-  ///
-  /// ## Features:
-  /// - Standard AlertDialog design
-  /// - Clean typography and spacing
-  /// - Conditional "Later" button based on force update status
-  /// - "Update Now" button that launches store URL
-  Widget _buildDefaultDialog(BuildContext context, bool isForceUpdate) {
-    return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-      child: WillPopScope(
-        onWillPop: () async {
-          // Prevent back button from closing force update dialogs
-          return !isForceUpdate;
-        },
-        child: AlertDialog(
-          title: Text('Update Available'),
-          content: Text(
-            'A new version of ${appName ?? "the app"} is available. Please update to the latest version.',
-          ),
-          actions: <Widget>[
-            if (showLaterButton == true && !isForceUpdate)
-              TextButton(
-                child: Text('Later'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            TextButton(
-              child: Text('Update Now'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                _launchURL();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Builds the modern dialog style - enhanced design with icons and better typography.
-  ///
-  /// [context] - Build context for the dialog
-  /// [isForceUpdate] - Whether this is a force update (hides "Later" button)
-  ///
-  /// ## Features:
-  /// - Rounded corners (20px border radius)
-  /// - Update icon in title
-  /// - Enhanced typography with different font sizes
-  /// - Improved content layout with spacing
-  /// - Elevated button for "Update Now" action
-  /// - Conditional "Later" button based on force update status
-  Widget _buildModernDialog(BuildContext context, bool isForceUpdate) {
-    return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-      child: WillPopScope(
-        onWillPop: () async {
-          // Prevent back button from closing force update dialogs
-          return !isForceUpdate;
-        },
-        child: Dialog(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.system_update,
-                    color: Colors.blue,
-                    size: 28,
-                  ),
-                ),
-                SizedBox(height: 16),
-                Text(
-                  'Update Available',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'A new version of ${appName ?? "the app"} is available. Please update to the latest version.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Colors.black54),
-                ),
-                SizedBox(height: 24),
-                Column(
-                  spacing: 8,
-                  children: [
-                    if (showLaterButton == true && !isForceUpdate)
-                      SizedBox(
-                        width: double.infinity,
-                        child: TextButton(
-                          child: Text('Later'),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                      ),
-                    if (showLaterButton == true && !isForceUpdate)
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            _launchURL();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text('Update Now'),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Builds the material dialog style - Material Design 3 inspired with gradient backgrounds.
-  ///
-  /// [context] - Build context for the dialog
-  /// [isForceUpdate] - Whether this is a force update (hides "Later" button)
-  ///
-  /// ## Features:
-  /// - Material Design 3 inspired styling
-  /// - Gradient backgrounds and modern visuals
-  /// - Large update icon with background
-  /// - Enhanced typography and spacing
-  /// - Outlined and Elevated button styles
-  /// - Conditional "Later" button based on force update status
-  Widget _buildMaterialDialog(BuildContext context, bool isForceUpdate) {
-    return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-      child: WillPopScope(
-        onWillPop: () async {
-          // Prevent back button from closing force update dialogs
-          return !isForceUpdate;
-        },
-        child: Dialog(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          child: Container(
-            padding: EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.system_update,
-                    size: 48,
-                    color: Colors.blue,
-                  ),
-                ),
-                SizedBox(height: 16),
-                Text(
-                  'Update Available',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'A new version of ${appName ?? "the app"} is available.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                ),
-                SizedBox(height: 24),
-                Column(
-                  spacing: 8,
-                  children: [
-                    if (showLaterButton == true && !isForceUpdate) ...[
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          child: Text('Later'),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                      ),
-                    ],
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        child: Text('Update Now'),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _launchURL();
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Launches the appropriate store URL based on platform and app IDs.
-  ///
-  /// [androidId] - Android package ID for Play Store URL (optional, uses instance androidId if not provided)
-  /// [iosId] - iOS App Store ID for App Store URL (optional, uses instance iosId if not provided)
-  ///
+  /// Launches the appropriate store URL based on platform and app IDs from Firestore.
+  /// 
+  /// [androidId] - Android package ID for Play Store URL (optional, uses Firestore if not provided)
+  /// [iosId] - iOS App Store ID for App Store URL (optional, uses Firestore if not provided)
+  /// 
   /// ## URL Generation:
   /// - **Android**: `https://play.google.com/store/apps/details?id={androidId}`
   /// - **iOS**: `https://apps.apple.com/app/id{iosId}`
-  ///
+  /// 
   /// ## Platform Detection:
   /// Uses `Theme.of(context).platform` to detect Android or iOS
-  ///
+  /// 
   /// ## Throws:
   /// Throws exception if URL cannot be launched or if app IDs are missing
   Future<void> _launchURL({String? androidId, String? iosId}) async {
     final platform = Theme.of(context).platform;
     String? url;
 
-    if (platform == TargetPlatform.android) {
-      url =
-          'https://play.google.com/store/apps/details?id=${androidId ?? 'com.example.myapp'}';
-    } else if (platform == TargetPlatform.iOS) {
-      url = 'https://apps.apple.com/app/id${iosId ?? '123456789'}';
+    // If app IDs not provided, fetch from Firestore
+    String? finalAndroidId = androidId;
+    String? finalIosId = iosId;
+    
+    if (finalAndroidId == null || finalIosId == null) {
+      try {
+        final platformDoc = Theme.of(context).platform == TargetPlatform.android ? 'Android' : 'Ios';
+        final doc = await firestore.collection('AppUpdateManager').doc(platformDoc).get();
+        
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          finalAndroidId = finalAndroidId ?? data['androidId'] as String?;
+          finalIosId = finalIosId ?? data['iosId'] as String?;
+        }
+      } catch (e) {
+        debugPrint('AppUpdateManager: Error fetching app IDs from Firestore: $e');
+      }
     }
+
+    if (platform == TargetPlatform.android) {
+      url = 'https://play.google.com/store/apps/details?id=${finalAndroidId ?? 'com.example.myapp'}';
+    } else if (platform == TargetPlatform.iOS) {
+      url = 'https://apps.apple.com/app/id${finalIosId ?? '123456789'}';
+    }
+
+    debugPrint('AppUpdateManager: Launching URL: $url');
 
     if (url != null && await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url));

@@ -1,7 +1,16 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app_update_manager/flutter_app_update_manager.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    // Handle Firebase initialization errors (e.g., in test environments)
+    print('Firebase initialization failed: $e');
+  }
   runApp(const MyApp());
 }
 
@@ -31,25 +40,37 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  DialogStyle currentDialogStyle = DialogStyle.defaultStyle;
-  String appName = "XTREM";
+  String appName = "Demo App";
+  bool showLaterButton = true;
+  bool autoSetup = false;
+  CustomUpdateDialog? selectedCustomDialog;
+  DefaultDialogColors? selectedDialogColors;
 
   @override
   void initState() {
     super.initState();
-    // Show update dialog on app start for demo purposes
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showUpdateDialog();
-    });
+    // Show update dialog on app start for demo purposes (skip in test environment)
+    if (kDebugMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showUpdateDialog();
+      });
+    }
   }
 
   void _showUpdateDialog() {
-    AppUpdateManager(
-      context: context,
-      appName: appName,
-      dialogStyle: currentDialogStyle,
-      customDialog: currentDialogStyle == DialogStyle.custom ? CustomUpdateDialogImpl() : null,
-    ).checkForUpdate();
+    try {
+      AppUpdateManager(
+        context: context,
+        appName: appName,
+        showLaterButton: showLaterButton,
+        autoSetup: autoSetup,
+        customDialog: selectedCustomDialog,
+        dialogColors: selectedDialogColors,
+      ).checkForUpdate();
+    } catch (e) {
+      // Handle Firebase initialization errors (e.g., in test environments)
+      debugPrint('Failed to show update dialog: $e');
+    }
   }
 
   @override
@@ -58,108 +79,243 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text(widget.title),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AppUpdateManagerScreen(),
+                ),
+              );
+            },
+            tooltip: 'Manage Update Settings',
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Dialog Style Selection',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    SizedBox(height: 16),
-                    DropdownButtonFormField<DialogStyle>(
-                      value: currentDialogStyle,
-                      decoration: InputDecoration(
-                        labelText: 'Select Dialog Style',
-                        border: OutlineInputBorder(),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // App Configuration Card
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'App Configuration',
+                        style: Theme.of(context).textTheme.headlineSmall,
                       ),
-                      items: DialogStyle.values.map((style) {
-                        return DropdownMenuItem(
-                          value: style,
-                          child: Text(style.name),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        if (value != null) {
+                      const SizedBox(height: 16),
+                      TextField(
+                        decoration: const InputDecoration(
+                          labelText: 'App Name',
+                          border: OutlineInputBorder(),
+                          hintText: 'Enter app name (e.g., Demo App)',
+                        ),
+                        onChanged: (value) {
                           setState(() {
-                            currentDialogStyle = value;
+                            appName = value.isNotEmpty ? value : "Demo App";
                           });
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'App Name',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    SizedBox(height: 16),
-                    TextField(
-                      decoration: InputDecoration(
-                        labelText: 'App Name',
-                        border: OutlineInputBorder(),
-                        hintText: 'Enter app name (e.g., XTREM)',
+                        },
                       ),
-                      onChanged: (value) {
-                        setState(() {
-                          appName = value.isNotEmpty ? value : "XTREM";
-                        });
-                      },
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: CheckboxListTile(
+                              title: const Text('Show Later Button'),
+                              subtitle: const Text('Allow users to dismiss optional updates'),
+                              value: showLaterButton,
+                              onChanged: (value) {
+                                setState(() {
+                                  showLaterButton = value ?? true;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: CheckboxListTile(
+                              title: const Text('Auto Setup'),
+                              subtitle: const Text('Create Firestore structure automatically'),
+                              value: autoSetup,
+                              onChanged: (value) {
+                                setState(() {
+                                  autoSetup = value ?? false;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _showUpdateDialog,
-              icon: Icon(Icons.system_update),
-              label: Text('Test Update Dialog'),
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 16),
-              ),
-            ),
-            SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Features',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    SizedBox(height: 16),
-                    _buildFeatureItem('✅ Multiple dialog styles available'),
-                    _buildFeatureItem('✅ Custom dialog support'),
-                    _buildFeatureItem('✅ App name customization'),
-                    _buildFeatureItem('✅ Force update handling'),
-                    _buildFeatureItem('✅ Later button auto-hide for force updates'),
-                    _buildFeatureItem('✅ Firebase Firestore integration'),
-                    _buildFeatureItem('✅ Auto setup for first-time users'),
-                  ],
+              const SizedBox(height: 16),
+
+              // Custom Dialog Selection Card
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Dialog Configuration',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: selectedCustomDialog == null ? 'Default' : 'Custom',
+                        decoration: const InputDecoration(
+                          labelText: 'Dialog Style',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'Default',
+                            child: Text('Default Dialog'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Custom',
+                            child: Text('Custom Dialog'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedCustomDialog = value == 'Custom' 
+                                ? CustomUpdateDialogImpl() 
+                                : null;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: selectedDialogColors == null ? 'Default Colors' : 'Custom Colors',
+                        decoration: const InputDecoration(
+                          labelText: 'Dialog Colors',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'Default Colors',
+                            child: Text('Default Colors'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Custom Colors',
+                            child: Text('Custom Colors'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedDialogColors = value == 'Custom Colors' 
+                                ? DefaultDialogColors(
+                                    buttonColor: Colors.blue,
+                                    textColor: Colors.grey[700],
+                                    titleColor: Colors.black87,
+                                  )
+                                : null;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+
+              // Test Button
+              ElevatedButton.icon(
+                onPressed: _showUpdateDialog,
+                icon: const Icon(Icons.system_update),
+                label: const Text('Test Update Dialog'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Features Card
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Package Features',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildFeatureItem('✅ Firebase Firestore integration'),
+                      _buildFeatureItem('✅ Automatic version comparison'),
+                      _buildFeatureItem('✅ Force update handling'),
+                      _buildFeatureItem('✅ Custom dialog support'),
+                      _buildFeatureItem('✅ Auto setup for first-time users'),
+                      _buildFeatureItem('✅ Built-in management screen'),
+                      _buildFeatureItem('✅ Platform-specific configuration'),
+                      _buildFeatureItem('✅ Default dialog with blur background'),
+                      _buildFeatureItem('✅ Dialog color customization'),
+                      _buildFeatureItem('✅ Later button auto-hide for force updates'),
+                      _buildFeatureItem('✅ Store URL auto-generation'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Usage Examples Card
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Usage Examples',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildCodeExample(
+                        'Basic Usage',
+                        '''AppUpdateManager(
+  context: context,
+  appName: "MyApp",
+).checkForUpdate();''',
+                      ),
+                      const SizedBox(height: 12),
+                      _buildCodeExample(
+                        'With Custom Dialog',
+                        '''AppUpdateManager(
+  context: context,
+  appName: "MyApp",
+  customDialog: MyCustomDialog(),
+).checkForUpdate();''',
+                      ),
+                      const SizedBox(height: 12),
+                      _buildCodeExample(
+                        'With Auto Setup',
+                        '''AppUpdateManager(
+  context: context,
+  autoSetup: true, // ⚠️ Set to false after first run
+).checkForUpdate();''',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -170,10 +326,39 @@ class _MyHomePageState extends State<MyHomePage> {
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         children: [
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Expanded(child: Text(text)),
         ],
       ),
+    );
+  }
+
+  Widget _buildCodeExample(String title, String code) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: Text(
+            code,
+            style: const TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -189,7 +374,7 @@ class CustomUpdateDialogImpl implements CustomUpdateDialog {
   }) {
     return Dialog(
       child: Container(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
@@ -202,7 +387,7 @@ class CustomUpdateDialogImpl implements CustomUpdateDialog {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.blue.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
@@ -213,7 +398,7 @@ class CustomUpdateDialogImpl implements CustomUpdateDialog {
                 color: Colors.blue.shade700,
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
               '🚀 New Version Available!',
               style: TextStyle(
@@ -222,7 +407,7 @@ class CustomUpdateDialogImpl implements CustomUpdateDialog {
                 color: Colors.blue.shade700,
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             RichText(
               textAlign: TextAlign.center,
               text: TextSpan(
@@ -231,7 +416,7 @@ class CustomUpdateDialogImpl implements CustomUpdateDialog {
                   color: Colors.grey[700],
                 ),
                 children: [
-                  TextSpan(text: 'A new version of '),
+                  const TextSpan(text: 'A new version of '),
                   TextSpan(
                     text: appName,
                     style: TextStyle(
@@ -239,34 +424,34 @@ class CustomUpdateDialogImpl implements CustomUpdateDialog {
                       color: Colors.blue.shade700,
                     ),
                   ),
-                  TextSpan(text: ' is available!'),
+                  const TextSpan(text: ' is available!'),
                 ],
               ),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             Row(
               children: [
                 if (!isForceUpdate && onLater != null) ...[
                   Expanded(
                     child: OutlinedButton(
-                      child: Text('Maybe Later'),
                       onPressed: onLater,
                       style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
+                      child: const Text('Maybe Later'),
                     ),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                 ],
                 Expanded(
                   child: ElevatedButton(
-                    child: Text('Update Now'),
                     onPressed: onUpdate,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.shade700,
                       foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
+                    child: const Text('Update Now'),
                   ),
                 ),
               ],
@@ -276,4 +461,4 @@ class CustomUpdateDialogImpl implements CustomUpdateDialog {
       ),
     );
   }
-}
+} 

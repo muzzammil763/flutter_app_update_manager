@@ -1,61 +1,71 @@
 # Flutter App Update Manager
 
-A powerful Flutter package to easily manage in-app updates using Firebase Firestore with multiple dialog styles and custom dialog support.
+A Powerful Flutter Package To Easily Manage In-App Updates Using Firebase Firestore With Custom Dialog Support And Comprehensive Management Features.
 
 ![Flutter App Update Manager](Screenshots/app_update_manager.png)
 
 ## Features
 
 *   **Automatic Update Checks**: Automatically checks for new app versions from Firebase Firestore.
-*   **Customizable Update Dialog**: Easily customize the update dialog to match your app's UI.
+*   **Default Dialog Style**: Clean AlertDialog with blur background and proper force update handling.
+*   **Custom Dialog Support**: Create your own beautiful update dialogs with full control.
 *   **Force and Optional Updates**: Configure updates to be either mandatory (force update) or optional.
 *   **Platform-Specific Configuration**: Separate update configurations for Android and iOS.
 *   **Auto Setup**: Automatically create Firestore structure with a single parameter.
-*   **Modern Dialog Design**: Beautiful blur background with proper force update handling.
 *   **Management Screen**: Built-in screen for managing update configurations.
+*   **Store URL Auto-Generation**: Automatically generates platform-specific store URLs.
+*   **Version Comparison**: Smart version comparison with build number support.
+*   **Default Dialog Customization**: Customize colors for title, text, and buttons.
+*   **Latest Firebase Compatibility**: Updated to work with Firebase v6.0.0+ and Firebase Core v4.0.0+.
 
 ## Screenshots
 
-### Dialog Styles
+### Default Dialog
 
-| Default Dialog | Modern Dialog |
-|----------------|---------------|
-| ![Default Dialog](Screenshots/default.jpeg) | ![Modern Dialog](Screenshots/modern.jpeg) |
+![Default Dialog](Screenshots/default.jpeg)
 
-| Material Dialog | Custom Dialog |
-|-----------------|---------------|
-| ![Material Dialog](Screenshots/material.jpeg) | ![Custom Dialog](Screenshots/custom.jpeg) |
+### Usage Examples
 
-### Dialog Style Usage Examples
-
-#### Default Style
+#### Basic Usage
 ```dart
 AppUpdateManager(
   context: context,
-  dialogStyle: DialogStyle.defaultStyle,
+  appName: "App Name",
   showLaterButton: true,
 ).checkForUpdate();
 ```
 
-#### Modern Style
+#### With Custom Colors
 ```dart
 AppUpdateManager(
   context: context,
-  dialogStyle: DialogStyle.modernStyle,
+  appName: "App Name",
+  showLaterButton: true,
+  dialogColors: DefaultDialogColors(
+    buttonColor: Colors.blue,
+    textColor: Colors.grey[700],
+    titleColor: Colors.black87,
+  ),
+).checkForUpdate();
+```
+
+### Custom Dialog
+
+![Custom Dialog](Screenshots/custom.jpeg)
+
+### Usage Examples
+
+#### Basic Usage
+```dart
+AppUpdateManager(
+  customDialog: MyCustomDialog(),
+  context: context,
+  appName: "App Name",
   showLaterButton: true,
 ).checkForUpdate();
 ```
 
-#### Material Style
-```dart
-AppUpdateManager(
-  context: context,
-  dialogStyle: DialogStyle.materialStyle,
-  showLaterButton: true,
-).checkForUpdate();
-```
-
-#### Custom Style
+### Custom Dialog
 ```dart
 class MyCustomDialog implements CustomUpdateDialog {
   @override
@@ -98,9 +108,16 @@ class MyCustomDialog implements CustomUpdateDialog {
 
 AppUpdateManager(
   context: context,
-  dialogStyle: DialogStyle.custom,
   customDialog: MyCustomDialog(),
   showLaterButton: true,
+).checkForUpdate();
+```
+
+### Auto Setup (First Time)
+```dart
+AppUpdateManager(
+  context: context,
+  autoSetup: true, // ⚠️ Set To False After First Run
 ).checkForUpdate();
 ```
 
@@ -110,7 +127,34 @@ Add this to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_app_update_manager: ^0.1.1
+  flutter_app_update_manager: ^0.1.6
+```
+
+### Firebase Compatibility
+
+This package is compatible with the latest Firebase packages:
+
+```yaml
+dependencies:
+  firebase_core: ^4.0.0
+  cloud_firestore: ^6.0.0
+```
+
+## Example App
+
+Check out the [example app](example/) for a complete demonstration of all features:
+
+- **Interactive Configuration**: Test different settings in real-time
+- **Custom Dialog Example**: Beautiful custom dialog implementation
+- **Auto Setup Demo**: See how auto setup works
+- **Management Screen**: Built-in configuration management
+- **Firebase Integration**: Complete setup guide
+
+Run the example:
+```bash
+cd example
+flutter pub get
+flutter run
 ```
 
 ## Quick Start
@@ -123,45 +167,28 @@ import 'package:flutter_app_update_manager/flutter_app_update_manager.dart';
 // Simple usage
 AppUpdateManager(
   context: context,
-  androidId: 'com.example.myapp',
-  iosId: '123456789',
   appName: "MyApp",
+  showLaterButton: true,
 ).checkForUpdate();
 ```
 
-### 2. With Custom Dialog Style
+### 2. With Custom Dialog
 
 ```dart
 AppUpdateManager(
   context: context,
-  androidId: 'com.example.myapp',
-  iosId: '123456789',
-  appName: "XTREM",
-  dialogStyle: DialogStyle.modernStyle, // or DialogStyle.materialStyle
-).checkForUpdate();
-```
-
-### 3. With Custom Dialog
-
-```dart
-AppUpdateManager(
-  context: context,
-  androidId: 'com.example.myapp',
-  iosId: '123456789',
-  appName: "XTREM",
-  dialogStyle: DialogStyle.custom,
+  appName: "MyApp",
   customDialog: MyCustomDialog(),
+  showLaterButton: true,
 ).checkForUpdate();
 ```
 
-### Quick Start with Auto Setup
-
-For the easiest setup, use the `autoSetup` parameter to automatically create the Firestore structure:
+### 3. With Auto Setup (First Time)
 
 ```dart
 AppUpdateManager(
   context: context,
-  autoSetup: true, // This will create the Firestore structure automatically
+  autoSetup: true, // ⚠️ Set to false after first run
 ).checkForUpdate();
 ```
 
@@ -178,12 +205,10 @@ The main class for managing app updates with Firebase Firestore integration.
 ```dart
 AppUpdateManager({
   required BuildContext context,
-  String? androidId,
-  String? iosId,
   String? appName,
+  bool? showLaterButton,
   FirebaseFirestore? firestore,
   bool autoSetup = false,
-  DialogStyle dialogStyle = DialogStyle.defaultStyle,
   CustomUpdateDialog? customDialog,
 })
 ```
@@ -192,56 +217,37 @@ AppUpdateManager({
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `context` | `BuildContext` | ✅ | - | **The build context** - Used to show dialogs and detect platform. Must be a valid context from a MaterialApp widget tree. |
-| `androidId` | `String?` | ❌ | `null` | **Android package ID** - Your app's package name (e.g., 'com.example.myapp'). Can also be configured in Firestore for centralized management. |
-| `iosId` | `String?` | ❌ | `null` | **iOS App Store ID** - Your app's numeric ID from the App Store (e.g., '123456789'). Can also be configured in Firestore. |
-| `appName` | `String?` | ❌ | `null` | **App name for dialogs** - The name to display in update dialogs (e.g., "MyApp"). Falls back to "App" if not provided. |
-| `firestore` | `FirebaseFirestore?` | ❌ | `FirebaseFirestore.instance` | **Custom Firestore instance** - Use this to provide a custom Firestore instance for testing or different environments. |
-| `autoSetup` | `bool` | ❌ | `false` | **Auto setup Firestore** - When true, creates the required Firestore structure with sample data. ⚠️ Set to false after first run to prevent data overwrites. |
-| `dialogStyle` | `DialogStyle` | ❌ | `DialogStyle.defaultStyle` | **Dialog appearance** - Choose from predefined styles or use custom. See DialogStyle enum for options. |
-| `customDialog` | `CustomUpdateDialog?` | ❌ | `null` | **Custom dialog implementation** - Your own dialog widget. Required when dialogStyle is DialogStyle.custom. |
+| `context` | `BuildContext` | ✅ | - | **Build context** - Used for showing dialogs and detecting platform |
+| `appName` | `String?` | ❌ | `"App"` | **App name** - The app name to display in update dialogs |
+| `showLaterButton` | `bool?` | ❌ | `false` | **Show later button** - When true, users can dismiss non-force updates |
+| `firestore` | `FirebaseFirestore?` | ❌ | `FirebaseFirestore.instance` | **Firestore instance** - Custom Firestore instance for testing |
+| `autoSetup` | `bool` | ❌ | `false` | **Auto setup** - Creates Firestore structure automatically |
+| `customDialog` | `CustomUpdateDialog?` | ❌ | `null` | **Custom dialog** - Your own dialog implementation |
+| `dialogColors` | `DefaultDialogColors?` | ❌ | `null` | **Dialog colors** - Custom colors for default dialog |
 
 #### Methods
 
-##### `checkForUpdate()`
+| Method | Description |
+|--------|-------------|
+| `checkForUpdate()` | Checks for available updates and shows dialog if needed |
 
-Checks for available updates by comparing the current app version with versions stored in Firebase Firestore.
+### DefaultDialogColors Class
 
-```dart
-Future<void> checkForUpdate()
-```
-
-**Returns:** `Future<void>` - Completes when the update check is finished
-
-**Behavior:**
-- Fetches current app version using `package_info_plus`
-- Detects platform (Android/iOS) automatically
-- Queries Firestore for available versions
-- Shows update dialog if exact version match is found
-- Handles force updates and optional updates
-- Launches store URL when user chooses to update
-
-### DialogStyle Enum
-
-Defines the available dialog styles for update notifications.
+Class for customizing the default dialog colors.
 
 ```dart
-enum DialogStyle {
-  defaultStyle,    // Classic AlertDialog with clean design
-  modernStyle,     // Modern rounded dialog with icons
-  materialStyle,   // Material Design 3 inspired style
-  custom,          // Custom dialog implementation
+class DefaultDialogColors {
+  final Color? buttonColor;   // Color for text buttons
+  final Color? textColor;     // Color for dialog text content
+  final Color? titleColor;    // Color for dialog title
+
+  const DefaultDialogColors({
+    this.buttonColor,
+    this.textColor,
+    this.titleColor,
+  });
 }
 ```
-
-#### Values
-
-| Value | Description | Visual Style |
-|-------|-------------|--------------|
-| `defaultStyle` | **Classic AlertDialog** - Simple, clean design with standard Material Design buttons | Standard AlertDialog with title, content, and action buttons |
-| `modernStyle` | **Modern rounded dialog** - Enhanced with icons, better typography, and rounded corners | Rounded corners, update icon, improved spacing and typography |
-| `materialStyle` | **Material Design 3** - Latest Material Design with gradient backgrounds and enhanced visuals | Material 3 styling with gradients, larger icons, and modern button styles |
-| `custom` | **Custom implementation** - Use your own dialog widget | Fully customizable - implement CustomUpdateDialog interface |
 
 ### CustomUpdateDialog Interface
 
@@ -267,204 +273,6 @@ abstract class CustomUpdateDialog {
 | `appName` | `String` | ✅ | **App name** - The app name to display in the dialog |
 | `onUpdate` | `VoidCallback` | ✅ | **Update callback** - Call this when user chooses to update |
 | `onLater` | `VoidCallback?` | ✅ | **Later callback** - Call this when user chooses to update later (null if force update) |
-
-#### Implementation Example
-
-```dart
-import 'package:flutter/material.dart';
-import 'package:flutter_app_update_manager/flutter_app_update_manager.dart';
-
-class MyCustomDialog implements CustomUpdateDialog {
-  @override
-  Widget build(
-    BuildContext context, {
-    required bool isForceUpdate,
-    required String appName,
-    required VoidCallback onUpdate,
-    required VoidCallback? onLater,
-  }) {
-    return WillPopScope(
-      onWillPop: () async => !isForceUpdate,
-      child: Dialog(
-        child: Container(
-          padding: EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(colors: [Colors.blue, Colors.purple]),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.rocket_launch, size: 48, color: Colors.white),
-              SizedBox(height: 16),
-              Text(
-                '🚀 New Version Available!',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: RichText(
-                  textAlign: TextAlign.start,
-                  text: TextSpan(
-                    children: [
-                      TextSpan(text: 'A new version of '),
-                      TextSpan(
-                        text: appName,
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      TextSpan(text: ' is available!'),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 24),
-              Column(
-                spacing: 8,
-                children: [
-                  if (!isForceUpdate && onLater != null)
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: onLater,
-                        child: Text('Maybe Later'),
-                      ),
-                    ),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: onUpdate,
-                      child: Text('Update Now'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-```
-
-## Firebase Firestore Setup
-
-### Auto Setup (Recommended for First Time)
-
-```dart
-AppUpdateManager(
-  context: context,
-  androidId: 'com.example.myapp',
-  iosId: '123456789',
-  appName: "XTREM",
-  autoSetup: true, // Set to false after first run
-).checkForUpdate();
-```
-
-### Manual Firestore Structure
-
-Create a collection named `AppUpdateManager` with documents for each platform:
-
-#### Document Structure
-
-**Simplified Structure (Recommended):**
-
-```json
-{
-  "androidId": "com.example.myapp",
-  "versions": [
-    {
-      "version": "0.0.1+1",
-      "forceUpdate": true
-    },
-    {
-      "version": "0.0.2+1",
-      "forceUpdate": false
-    }
-  ]
-}
-```
-
-**For iOS:**
-
-```json
-{
-  "iosId": "123456789",
-  "versions": [
-    {
-      "version": "0.0.1+1",
-      "forceUpdate": true
-    },
-    {
-      "version": "0.0.2+1",
-      "forceUpdate": false
-    }
-  ]
-}
-```
-
-## Firestore Configuration
-
-### App IDs Configuration
-
-You can configure your app IDs in two ways:
-
-1. **In your code** (as before):
-   ```dart
-   AppUpdateManager(
-     context: context,
-     androidId: 'com.example.myapp',
-     iosId: '123456789',
-   ).checkForUpdate();
-   ```
-
-2. **In Firestore** (recommended for centralized management):
-   - Add `androidId` and `iosId` fields to your Firestore documents
-   - The package will use Firestore values if available, otherwise fall back to code values
-   - This allows you to update app IDs without releasing a new app version
-
-## Version Management
-
-### Simplified Structure Benefits
-
-The simplified structure makes version management much easier:
-
-- **Exact version matching**: Only shows dialog when version+build number exactly matches
-- **Simple configuration**: Each version has just `version` and `forceUpdate` fields
-- **Easy to manage**: Just add versions to the array when you want to show the dialog
-- **Clear logic**: If version exists in Firestore, show dialog; otherwise, don't
-
-### Version Format
-
-Versions should follow the format: `major.minor.patch+build` (e.g., `1.0.0+1`)
-
-- **Flexible matching**: Supports both formats
-  - `1.0.0+1` (with build number) - exact match required
-  - `1.0.0` (without build number) - matches version part only
-- **Force update**: When `forceUpdate: true`, dialog cannot be dismissed
-- **Optional update**: When `forceUpdate: false`, shows "Later" button and dialog is dismissible
-
-**Examples:**
-- App version `0.0.1+1` + Firestore `0.0.1+1` → **Dialog shows**
-- App version `0.0.1+1` + Firestore `0.0.1` → **Dialog shows** (version part matches)
-- App version `0.0.1` + Firestore `0.0.1+1` → **Dialog shows** (version part matches)
-- App version `0.0.1+1` + Firestore `0.0.2` → **No dialog** (no match)
-
-## Example App
-
-Run the example app to see all dialog styles in action:
-
-```bash
-cd example
-flutter run
-```
-
-The example app demonstrates:
-- All dialog styles
-- Custom dialog implementation
-- App name customization
-- Force update scenarios
 
 ## Getting Started Guide
 
@@ -628,66 +436,120 @@ AppUpdateManager(
   showLaterButton: true, // Show a "Later" button for optional updates
   appName: 'My Awesome App', // Your app's name
   autoSetup: false, // Set to false after initial setup
-  dialogStyle: DialogStyle.modernStyle, // Choose dialog style
 ).checkForUpdate();
 ```
 
-### Dialog Styles
+### Dialog Features
 
-The package supports multiple dialog styles:
+The Package Supports:
 
 ```dart
-// Default style - Classic AlertDialog
-dialogStyle: DialogStyle.defaultStyle
+// Default Dialog - Clean AlertDialog With Blur Background
+AppUpdateManager(context: context).checkForUpdate();
 
-// Modern style - Enhanced design with blur background
-dialogStyle: DialogStyle.modernStyle
+// Custom Dialog - Your Own Implementation
+AppUpdateManager(
+  context: context,
+  customDialog: MyCustomDialog(),
+).checkForUpdate();
 
-// Material style - Material Design 3 inspired
-dialogStyle: DialogStyle.materialStyle
-
-// Custom style - Your own implementation
-dialogStyle: DialogStyle.custom
+// Force Update Handling - Hides "Later" Button Automatically
+// Configured In Firestore With forceUpdate: true
 ```
 
 ### Custom Dialog Implementation
 
-Create your own dialog by implementing `CustomUpdateDialog`:
+Create Your Own Dialog By Implementing `CustomUpdateDialog`:
 
 ```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_app_update_manager/flutter_app_update_manager.dart';
+
 class MyCustomDialog implements CustomUpdateDialog {
   @override
-  Widget build(BuildContext context, {
-    required bool isForceUpdate,
-    required String appName,
-    required VoidCallback onUpdate,
-    required VoidCallback? onLater,
-  }) {
-    return AlertDialog(
-      title: Text('Custom Update Dialog'),
-      content: Text('Update $appName now?'),
-      actions: [
-        if (onLater != null)
-          TextButton(onPressed: onLater, child: Text('Later')),
-        ElevatedButton(onPressed: onUpdate, child: Text('Update')),
-      ],
+  Widget build(
+          BuildContext context, {
+            required bool isForceUpdate,
+            required String appName,
+            required VoidCallback onUpdate,
+            required VoidCallback? onLater,
+          }) {
+    return WillPopScope(
+      onWillPop: () async => !isForceUpdate,
+      child: Dialog(
+        child: Container(
+          padding: EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(colors: [Colors.blue, Colors.purple]),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.rocket_launch, size: 48, color: Colors.white),
+              SizedBox(height: 16),
+              Text(
+                '🚀 New Version Available!',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: RichText(
+                  textAlign: TextAlign.start,
+                  text: TextSpan(
+                    children: [
+                      TextSpan(text: 'A new version of '),
+                      TextSpan(
+                        text: appName,
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(text: ' is available!'),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 24),
+              Column(
+                spacing: 8,
+                children: [
+                  if (!isForceUpdate && onLater != null)
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: onLater,
+                        child: Text('Maybe Later'),
+                      ),
+                    ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: onUpdate,
+                      child: Text('Update Now'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
 
-// Use custom dialog
+// Use Custom Dialog
 AppUpdateManager(
   context: context,
-  dialogStyle: DialogStyle.custom,
   customDialog: MyCustomDialog(),
 ).checkForUpdate();
 ```
 
 ## Additional Information
 
-*   **Contributing**: Contributions are welcome! Please feel free to submit a pull request.
-*   **Issues**: If you find any issues or have a feature request, please file an issue on our [GitHub repository](https://github.com/your-repo-link).
-*   **License**: This package is licensed under the MIT License.
+*   **Contributing**: Contributions Are Welcome! Please Feel Free To Submit A Pull Request.
+*   **Issues**: If You Find Any Issues Or Have A Feature Request, Please File An Issue On Our [GitHub repository](https://github.com/muzzammil763/flutter_app_update_manager).
+*   **License**: This Package Is Licensed Under The MIT License.
 
 ---
 

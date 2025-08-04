@@ -40,7 +40,6 @@ void main() {
                     AppUpdateManager(
                       context: context,
                       appName: 'TestApp',
-                      dialogStyle: DialogStyle.modernStyle,
                     ).checkForUpdate();
                   },
                   child: Text('Test'),
@@ -65,7 +64,6 @@ void main() {
                     AppUpdateManager(
                       context: context,
                       appName: 'TestApp',
-                      dialogStyle: DialogStyle.custom,
                       customDialog: TestCustomDialog(),
                     ).checkForUpdate();
                   },
