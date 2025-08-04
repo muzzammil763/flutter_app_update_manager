@@ -160,7 +160,6 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
         final a = _versions[i];
         final b = _originalVersions[i];
         if (a['version'] != b['version'] ||
-            a['isDiscontinued'] != b['isDiscontinued'] ||
             a['forceUpdate'] != b['forceUpdate']) {
           changed = true;
           break;
@@ -180,7 +179,6 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
         final a = _versionsIos[i];
         final b = _originalVersionsIos[i];
         if (a['version'] != b['version'] ||
-            a['isDiscontinued'] != b['isDiscontinued'] ||
             a['forceUpdate'] != b['forceUpdate']) {
           changed = true;
           break;
@@ -253,14 +251,12 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
                   if (isAndroid) {
                     _versions.add({
                       'version': '',
-                      'isDiscontinued': false,
                       'forceUpdate': false,
                     });
                     _versionControllers.add(TextEditingController());
                   } else {
                     _versionsIos.add({
                       'version': '',
-                      'isDiscontinued': false,
                       'forceUpdate': false,
                     });
                     _versionControllersIos.add(TextEditingController());
@@ -351,26 +347,6 @@ class _AppUpdateManagerScreenState extends State<AppUpdateManagerScreen> {
                       SizedBox(height: 12),
                       Row(
                         children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Text('Discontinued: '),
-                                CupertinoSwitch(
-                                  value: item['isDiscontinued'] ?? false,
-                                  onChanged: (val) {
-                                    setState(() {
-                                      if (isAndroid) {
-                                        _versions[idx]['isDiscontinued'] = val;
-                                      } else {
-                                        _versionsIos[idx]['isDiscontinued'] = val;
-                                      }
-                                    });
-                                    _checkForChanges();
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
                           Expanded(
                             child: Row(
                               children: [

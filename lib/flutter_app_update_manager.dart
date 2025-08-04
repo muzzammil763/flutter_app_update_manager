@@ -210,35 +210,24 @@ class AppUpdateManager {
           debugPrint('AppUpdateManager: Using simplified version structure');
           debugPrint('AppUpdateManager: Versions from Firestore: $versions');
           
-          // Find current version in the array
-          bool foundCurrentVersion = false;
+          // Find exact version match
+          bool foundExactMatch = false;
           bool shouldShowDialog = false;
           bool isForceUpdate = false;
           
           for (var versionData in versions) {
             final version = versionData['version'] as String;
-            final isDiscontinued = versionData['isDiscontinued'] as bool? ?? false;
             final forceUpdate = versionData['forceUpdate'] as bool? ?? false;
             
-            // Remove build number for comparison
-            final currentVersionWithoutBuild = currentVersion.split('+')[0];
-            final versionWithoutBuild = version.split('+')[0];
+            debugPrint('AppUpdateManager: Checking version: $version (forceUpdate: $forceUpdate)');
+            debugPrint('AppUpdateManager: Current app version: $currentVersion');
             
-            debugPrint('AppUpdateManager: Checking version: $version (discontinued: $isDiscontinued, forceUpdate: $forceUpdate)');
-            
-            if (versionWithoutBuild == currentVersionWithoutBuild) {
-              foundCurrentVersion = true;
-              if (isDiscontinued) {
-                shouldShowDialog = true;
-                isForceUpdate = true;
-                debugPrint('AppUpdateManager: Current version is discontinued');
-                break;
-              }
-            } else if (versionWithoutBuild != currentVersionWithoutBuild) {
-              // This is a different version, check if it's newer
+            // Exact match check (version + build number)
+            if (version == currentVersion) {
+              foundExactMatch = true;
               shouldShowDialog = true;
               isForceUpdate = forceUpdate;
-              debugPrint('AppUpdateManager: Found different version, showing update dialog');
+              debugPrint('AppUpdateManager: Exact version match found, showing dialog');
               break;
             }
           }
@@ -248,8 +237,8 @@ class AppUpdateManager {
             return;
           }
           
-          if (!foundCurrentVersion) {
-            debugPrint('AppUpdateManager: Current version not found in Firestore, no update needed');
+          if (!foundExactMatch) {
+            debugPrint('AppUpdateManager: No exact version match found, no update needed');
           }
           return;
         }
@@ -327,17 +316,14 @@ class AppUpdateManager {
       
       // Setup for Android
       await collection.doc('Android').set({
-        'androidId': '',
-        'iosId': '',
+        'androidId': 'com.example.myapp',
         'versions': [
           {
             'version': '0.0.1+1',
-            'isDiscontinued': true,
             'forceUpdate': true
           },
           {
             'version': '0.0.2+1',
-            'isDiscontinued': false,
             'forceUpdate': false
           }
         ]
@@ -345,17 +331,14 @@ class AppUpdateManager {
       
       // Setup for iOS
       await collection.doc('Ios').set({
-        'androidId': '',
-        'iosId': '',
+        'iosId': '123456789',
         'versions': [
           {
             'version': '0.0.1+1',
-            'isDiscontinued': true,
             'forceUpdate': true
           },
           {
             'version': '0.0.2+1',
-            'isDiscontinued': false,
             'forceUpdate': false
           }
         ]
@@ -364,7 +347,7 @@ class AppUpdateManager {
       debugPrint('AppUpdateManager: Firestore structure created successfully!');
       debugPrint('AppUpdateManager: Collection: AppUpdateManager');
       debugPrint('AppUpdateManager: Documents: Android, Ios');
-      debugPrint('AppUpdateManager: Structure: Simplified (versions array with isDiscontinued and forceUpdate flags)');
+      debugPrint('AppUpdateManager: Structure: Simplified (versions array with forceUpdate flag)');
       debugPrint('AppUpdateManager: ⚠️  IMPORTANT: Set autoSetup: false after first run to prevent overwriting your data!');
       
     } catch (e) {
@@ -408,100 +391,34 @@ class AppUpdateManager {
       barrierDismissible: !isForceUpdate,
       builder: (BuildContext context) {
         debugPrint('AppUpdateManager: Building dialog...');
-        return BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: WillPopScope(
-            onWillPop: () async {
-              // Prevent back button from closing force update dialogs
-              return !isForceUpdate;
+        
+        // Use custom dialog if provided
+        if (dialogStyle == DialogStyle.custom && customDialog != null) {
+          return customDialog!.build(
+            context,
+            isForceUpdate: isForceUpdate,
+            appName: appName ?? 'App',
+            onUpdate: () {
+              Navigator.of(context).pop();
+              _launchURL();
             },
-            child: Dialog(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 20,
-                      offset: Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.system_update,
-                        color: Colors.blue,
-                        size: 28,
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Update Available',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'A new version of ${appName ?? "the app"} is available. Please update to the latest version.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black54,
-                      ),
-                    ),
-                    SizedBox(height: 24),
-                    Row(
-                      children: [
-                        if (showLaterButton == true && !isForceUpdate)
-                          Expanded(
-                            child: TextButton(
-                              child: Text('Later'),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              },
-                            ),
-                          ),
-                        if (showLaterButton == true && !isForceUpdate)
-                          SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            child: Text('Update Now'),
-                            onPressed: () {
-                              _launchURL();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
+            onLater: isForceUpdate ? null : () {
+              Navigator.of(context).pop();
+            },
+          );
+        }
+        
+        // Use predefined dialog styles
+        switch (dialogStyle) {
+          case DialogStyle.defaultStyle:
+            return _buildDefaultDialog(context, isForceUpdate);
+          case DialogStyle.modernStyle:
+            return _buildModernDialog(context, isForceUpdate);
+          case DialogStyle.materialStyle:
+            return _buildMaterialDialog(context, isForceUpdate);
+          case DialogStyle.custom:
+            return _buildDefaultDialog(context, isForceUpdate);
+        }
       },
     );
   }
@@ -517,25 +434,34 @@ class AppUpdateManager {
   /// - Conditional "Later" button based on force update status
   /// - "Update Now" button that launches store URL
   Widget _buildDefaultDialog(BuildContext context, bool isForceUpdate) {
-    return AlertDialog(
-      title: Text('Update Available'),
-      content: Text('A new version of ${appName != null ? '**$appName**' : 'the app'} is available. Please update to the latest version.'),
-      actions: <Widget>[
-        if (!isForceUpdate)
-          TextButton(
-            child: Text('Later'),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-        TextButton(
-          child: Text('Update Now'),
-          onPressed: () {
-            Navigator.of(context).pop();
-            _launchURL(androidId: androidId, iosId: iosId);
-          },
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+      child: WillPopScope(
+        onWillPop: () async {
+          // Prevent back button from closing force update dialogs
+          return !isForceUpdate;
+        },
+        child: AlertDialog(
+          title: Text('Update Available'),
+          content: Text('A new version of ${appName ?? "the app"} is available. Please update to the latest version.'),
+          actions: <Widget>[
+            if (showLaterButton == true && !isForceUpdate)
+              TextButton(
+                child: Text('Later'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            TextButton(
+              child: Text('Update Now'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _launchURL();
+              },
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -552,135 +478,198 @@ class AppUpdateManager {
   /// - Elevated button for "Update Now" action
   /// - Conditional "Later" button based on force update status
   Widget _buildModernDialog(BuildContext context, bool isForceUpdate) {
-    return AlertDialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
-      title: Row(
-        children: [
-          Icon(Icons.system_update, color: Colors.blue),
-          SizedBox(width: 10),
-          Text(
-            'Update Available',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+      child: WillPopScope(
+        onWillPop: () async {
+          // Prevent back button from closing force update dialogs
+          return !isForceUpdate;
+        },
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.system_update,
+                    color: Colors.blue,
+                    size: 28,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Update Available',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'A new version of ${appName ?? "the app"} is available. Please update to the latest version.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black54,
+                  ),
+                ),
+                SizedBox(height: 24),
+                Row(
+                  children: [
+                    if (showLaterButton == true && !isForceUpdate)
+                      Expanded(
+                        child: TextButton(
+                          child: Text('Later'),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                      ),
+                    if (showLaterButton == true && !isForceUpdate)
+                      SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        child: Text('Update Now'),
+                        onPressed: () {
+                          _launchURL();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'A new version of ${appName != null ? '**$appName**' : 'the app'} is available.',
-            style: TextStyle(fontSize: 16),
-          ),
-          SizedBox(height: 10),
-          Text(
-            'Please update to the latest version for the best experience.',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
-          ),
-        ],
-      ),
-      actions: <Widget>[
-        if (!isForceUpdate)
-          TextButton(
-            child: Text('Later'),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-        ElevatedButton(
-          child: Text('Update Now'),
-          onPressed: () {
-            Navigator.of(context).pop();
-            _launchURL();
-          },
         ),
-      ],
+      ),
     );
   }
 
-  /// Builds the material dialog style - Material Design 3 inspired with modern visuals.
+  /// Builds the material dialog style - Material Design 3 inspired with gradient backgrounds.
   /// 
   /// [context] - Build context for the dialog
   /// [isForceUpdate] - Whether this is a force update (hides "Later" button)
   /// 
   /// ## Features:
-  /// - Material Design 3 styling
-  /// - Large update icon with background container
-  /// - Enhanced typography with larger fonts
-  /// - Centered content layout
-  /// - Full-width buttons with proper spacing
+  /// - Material Design 3 inspired styling
+  /// - Gradient backgrounds and modern visuals
+  /// - Large update icon with background
+  /// - Enhanced typography and spacing
   /// - Outlined and Elevated button styles
   /// - Conditional "Later" button based on force update status
   Widget _buildMaterialDialog(BuildContext context, bool isForceUpdate) {
-    return Dialog(
-      child: Container(
-        padding: EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.system_update,
-                size: 48,
-                color: Colors.blue,
-              ),
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Update Available',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'A new version of ${appName != null ? '**$appName**' : 'the app'} is available.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[700],
-              ),
-            ),
-            SizedBox(height: 24),
-            Row(
-              children: [
-                if (!isForceUpdate) ...[
-                  Expanded(
-                    child: OutlinedButton(
-                      child: Text('Later'),
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                ],
-                Expanded(
-                  child: ElevatedButton(
-                    child: Text('Update Now'),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _launchURL(androidId: androidId, iosId: iosId);
-                    },
-                  ),
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+      child: WillPopScope(
+        onWillPop: () async {
+          // Prevent back button from closing force update dialogs
+          return !isForceUpdate;
+        },
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
                 ),
               ],
             ),
-          ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.system_update,
+                    size: 48,
+                    color: Colors.blue,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Update Available',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'A new version of ${appName ?? "the app"} is available.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                SizedBox(height: 24),
+                Row(
+                  children: [
+                    if (showLaterButton == true && !isForceUpdate) ...[
+                      Expanded(
+                        child: OutlinedButton(
+                          child: Text('Later'),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      child: ElevatedButton(
+                        child: Text('Update Now'),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _launchURL();
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

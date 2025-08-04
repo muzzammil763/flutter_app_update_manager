@@ -2,7 +2,7 @@
 
 A powerful Flutter package to easily manage in-app updates using Firebase Firestore with multiple dialog styles and custom dialog support.
 
-![Flutter App Update Manager](https://via.placeholder.com/800x400/4A90E2/FFFFFF?text=Flutter+App+Update+Manager)
+![Flutter App Update Manager](Screenshots/app_update_manager.png)
 
 ## Features
 
@@ -270,43 +270,36 @@ AppUpdateManager(
 
 Create a collection named `AppUpdateManager` with documents for each platform:
 
-**Document: Android**
+#### Document Structure
+
+**Simplified Structure (Recommended):**
+
 ```json
 {
-  "androidId": "com.example.myapp",
-  "iosId": "123456789",
   "versions": [
     {
-      "version": "1.0.0",
-      "isDiscontinued": true,
+      "version": "0.0.1+1",
       "forceUpdate": true
     },
     {
-      "version": "1.1.0",
-      "isDiscontinued": false,
+      "version": "0.0.2+1",
       "forceUpdate": false
     }
   ]
 }
 ```
 
-**Document: Ios**
+**Original Structure (Legacy):**
+
 ```json
 {
-  "androidId": "com.example.myapp",
-  "iosId": "123456789",
   "versions": [
     {
-      "version": "1.0.0",
-      "isDiscontinued": true,
-      "forceUpdate": true
-    },
-    {
-      "version": "1.1.0",
-      "isDiscontinued": false,
+      "version": "0.0.2+1",
       "forceUpdate": false
     }
-  ]
+  ],
+  "discontinuedVersions": ["0.0.1+1"]
 }
 ```
 
@@ -330,31 +323,24 @@ You can configure your app IDs in two ways:
    - The package will use Firestore values if available, otherwise fall back to code values
    - This allows you to update app IDs without releasing a new app version
 
-### Version Management
+## Version Management
 
-### Adding New Versions
+### Simplified Structure Benefits
 
-1. **Go to Firebase Console**
-2. **Navigate to Firestore**
-3. **Find the `AppUpdateManager` collection**
-4. **Select your platform document (Android/Ios)**
-5. **Add a new version object to the `versions` array**
+The simplified structure makes version management much easier:
 
-### Version Object Structure
+- **Exact version matching**: Only shows dialog when version+build number exactly matches
+- **Simple configuration**: Each version has just `version` and `forceUpdate` fields
+- **Easy to manage**: Just add versions to the array when you want to show the dialog
+- **Clear logic**: If version exists in Firestore, show dialog; otherwise, don't
 
-```json
-{
-  "version": "1.2.0",
-  "isDiscontinued": false,
-  "forceUpdate": false
-}
-```
+### Version Format
 
-### Force Update Configuration
+Versions should follow the format: `major.minor.patch+build` (e.g., `1.0.0+1`)
 
-- **`isDiscontinued: true`**: Current version is discontinued, force update
-- **`forceUpdate: true`**: New version requires force update (hides "Later" button)
-- **`forceUpdate: false`**: Optional update (shows "Later" button)
+- **Exact matching**: Only shows dialog when version+build number exactly matches your app's version
+- **Force update**: When `forceUpdate: true`, dialog cannot be dismissed
+- **Optional update**: When `forceUpdate: false`, shows "Later" button and dialog is dismissible
 
 ## Example App
 
@@ -480,10 +466,17 @@ void initState() {
     context: context,
     androidId: 'your.android.app.id',
     iosId: 'your.ios.app.id',
+    showLaterButton: true, // Show "Later" button for optional updates
+    appName: "MyApp",
     autoSetup: true, // Remove this after first run
   ).checkForUpdate();
 }
 ```
+
+**How it works:**
+- If your app version is `0.0.1+1` and Firestore has `{"version": "0.0.1+1", "forceUpdate": true}`, dialog shows
+- If your app version is `0.0.1+1` and Firestore has `{"version": "0.0.1+0", "forceUpdate": false}`, no dialog
+- If your app version is `0.0.1+1` and Firestore has `{"version": "0.0.0+1", "forceUpdate": false}`, no dialog
 
 ### Management Screen
 
@@ -517,3 +510,72 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Support
 
 If you encounter any issues or have questions, please open an issue on GitHub.
+
+### Customization
+
+You can customize the update dialog by passing additional parameters to the `AppUpdateManager` constructor:
+
+```dart
+AppUpdateManager(
+  context: context,
+  androidId: 'your.android.app.id',
+  iosId: 'your.ios.app.id',
+  showLaterButton: true, // Show a "Later" button for optional updates
+  appName: 'My Awesome App', // Your app's name
+  playStoreUrl: 'https://play.google.com/store/apps/details?id=your.android.app.id', // Custom Play Store URL
+  appStoreUrl: 'https://apps.apple.com/app/id-your.ios.app.id', // Custom App Store URL
+  autoSetup: false, // Set to false after initial setup
+  dialogStyle: DialogStyle.modernStyle, // Choose dialog style
+).checkForUpdate();
+```
+
+### Dialog Styles
+
+The package supports multiple dialog styles:
+
+```dart
+// Default style - Classic AlertDialog
+dialogStyle: DialogStyle.defaultStyle
+
+// Modern style - Enhanced design with blur background
+dialogStyle: DialogStyle.modernStyle
+
+// Material style - Material Design 3 inspired
+dialogStyle: DialogStyle.materialStyle
+
+// Custom style - Your own implementation
+dialogStyle: DialogStyle.custom
+```
+
+### Custom Dialog Implementation
+
+Create your own dialog by implementing `CustomUpdateDialog`:
+
+```dart
+class MyCustomDialog implements CustomUpdateDialog {
+  @override
+  Widget build(BuildContext context, {
+    required bool isForceUpdate,
+    required String appName,
+    required VoidCallback onUpdate,
+    required VoidCallback? onLater,
+  }) {
+    return AlertDialog(
+      title: Text('Custom Update Dialog'),
+      content: Text('Update $appName now?'),
+      actions: [
+        if (onLater != null)
+          TextButton(onPressed: onLater, child: Text('Later')),
+        ElevatedButton(onPressed: onUpdate, child: Text('Update')),
+      ],
+    );
+  }
+}
+
+// Use custom dialog
+AppUpdateManager(
+  context: context,
+  dialogStyle: DialogStyle.custom,
+  customDialog: MyCustomDialog(),
+).checkForUpdate();
+```
