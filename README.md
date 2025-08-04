@@ -227,6 +227,7 @@ class MyCustomDialog implements CustomUpdateDialog {
             ),
             SizedBox(height: 24),
             Row(
+              spacing:8,
               children: [
                 if (!isForceUpdate && onLater != null)
                   Expanded(
@@ -594,7 +595,6 @@ AppUpdateManager(
 ## Author
 
 <div align="center">
-  <img src="https://avatars.githubusercontent.com/u/150317959?v=4" alt="Muzamil Ghafoor's GitHub Profile" width="100" style="border-radius: 50%;"/>
   
   **Muzamil Ghafoor**
   
@@ -602,8 +602,4 @@ AppUpdateManager(
   
   [![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/muzzammil763)
   [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/muzamil-ghafoor-181840344?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app)
-  
-  ![GitHub Stats](https://github-readme-stats.vercel.app/api?username=muzzammil763&show_icons=true&theme=radical)
-  
-  ![GitHub Streak](https://streak-stats.demolab.com/?user=muzzammil763&theme=radical)
 </div>
