@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.6] - 2024-12-19
+
+### Changed
+- **Enhanced Firebase Compatibility**: Updated to work with both latest and previous Firebase versions
+  - **Firebase Core**: v3.0.0+ (supports both v3.x and v4.x)
+  - **Cloud Firestore**: v5.0.0+ (supports both v5.x and v6.x)
+- **Updated Dependencies**: Firebase packages updated to support multiple versions
+  - `cloud_firestore`: `^5.0.0` (supports v5.x and v6.x)
+  - `firebase_core`: `^3.0.0` (supports v3.x and v4.x)
+  - `cloud_firestore_platform_interface`: `^6.6.12` (compatible with firebase_core ^3.0.0)
+
+### Fixed
+- **Dependency Conflicts**: Resolved Firebase dependency conflicts for better version compatibility
+- **Documentation**: Updated README and CHANGELOG to reflect version compatibility changes
+
 ## [0.1.5] - 2024-12-19
 
 ### Added

@@ -186,13 +186,7 @@ class AppUpdateManager {
     debugPrint('AppUpdateManager: Platform detected: $platform');
 
     try {
-      // Check if Firebase is properly initialized
-      if (firestore == null) {
-        debugPrint(
-          'AppUpdateManager: Firebase not initialized, skipping update check',
-        );
-        return;
-      }
+      // Firebase is always initialized since it's required in constructor
 
       final doc = await firestore
           .collection('AppUpdateManager')
@@ -203,9 +197,7 @@ class AppUpdateManager {
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
 
-        // Get app IDs from Firestore
-        final firestoreAndroidId = data['androidId'] as String?;
-        final firestoreIosId = data['iosId'] as String?;
+        // App IDs are fetched later when needed for URL generation
 
         // Check for new simplified structure first
         if (data.containsKey('versions') && data['versions'] is List) {
@@ -458,11 +450,8 @@ class AppUpdateManager {
         // Use default dialog
         return BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: WillPopScope(
-            onWillPop: () async {
-              // Prevent back button from closing force update dialogs
-              return !isForceUpdate;
-            },
+          child: PopScope(
+            canPop: !isForceUpdate,
             child: AlertDialog(
               title: Text(
                 'Update Available',
