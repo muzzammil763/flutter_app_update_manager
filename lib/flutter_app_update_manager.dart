@@ -221,13 +221,38 @@ class AppUpdateManager {
             debugPrint('AppUpdateManager: Checking version: $version (forceUpdate: $forceUpdate)');
             debugPrint('AppUpdateManager: Current app version: $currentVersion');
             
-            // Exact match check (version + build number)
+            // Check for exact match first (version + build number)
             if (version == currentVersion) {
               foundExactMatch = true;
               shouldShowDialog = true;
               isForceUpdate = forceUpdate;
               debugPrint('AppUpdateManager: Exact version match found, showing dialog');
               break;
+            }
+            
+            // If no exact match, check if Firestore version is without build number
+            // and current version has build number, then compare version parts
+            if (!version.contains('+') && currentVersion.contains('+')) {
+              final currentVersionWithoutBuild = currentVersion.split('+')[0];
+              if (version == currentVersionWithoutBuild) {
+                foundExactMatch = true;
+                shouldShowDialog = true;
+                isForceUpdate = forceUpdate;
+                debugPrint('AppUpdateManager: Version match found (Firestore without build, app with build), showing dialog');
+                break;
+              }
+            }
+            
+            // If Firestore version has build number but app version doesn't, compare version parts
+            if (version.contains('+') && !currentVersion.contains('+')) {
+              final firestoreVersionWithoutBuild = version.split('+')[0];
+              if (firestoreVersionWithoutBuild == currentVersion) {
+                foundExactMatch = true;
+                shouldShowDialog = true;
+                isForceUpdate = forceUpdate;
+                debugPrint('AppUpdateManager: Version match found (Firestore with build, app without build), showing dialog');
+                break;
+              }
             }
           }
           
@@ -252,14 +277,32 @@ class AppUpdateManager {
         for (var versionData in versions) {
           final firestoreVersion = versionData['version'] as String;
           
-          // Remove build number for comparison if present
-          final currentVersionWithoutBuild = currentVersion.split('+')[0];
-          final firestoreVersionWithoutBuild = firestoreVersion.split('+')[0];
-          
-          if (firestoreVersionWithoutBuild != currentVersionWithoutBuild) {
-            debugPrint('AppUpdateManager: Newer version found, showing update dialog');
+          // Check for exact match first
+          if (firestoreVersion == currentVersion) {
+            debugPrint('AppUpdateManager: Exact version match found, showing update dialog');
             _showUpdateDialog(isForceUpdate: versionData['forceUpdate']);
             break;
+          }
+          
+          // If no exact match, check if Firestore version is without build number
+          // and current version has build number, then compare version parts
+          if (!firestoreVersion.contains('+') && currentVersion.contains('+')) {
+            final currentVersionWithoutBuild = currentVersion.split('+')[0];
+            if (firestoreVersion == currentVersionWithoutBuild) {
+              debugPrint('AppUpdateManager: Version match found (Firestore without build, app with build), showing dialog');
+              _showUpdateDialog(isForceUpdate: versionData['forceUpdate']);
+              break;
+            }
+          }
+          
+          // If Firestore version has build number but app version doesn't, compare version parts
+          if (firestoreVersion.contains('+') && !currentVersion.contains('+')) {
+            final firestoreVersionWithoutBuild = firestoreVersion.split('+')[0];
+            if (firestoreVersionWithoutBuild == currentVersion) {
+              debugPrint('AppUpdateManager: Version match found (Firestore with build, app without build), showing dialog');
+              _showUpdateDialog(isForceUpdate: versionData['forceUpdate']);
+              break;
+            }
           }
         }
       } else {

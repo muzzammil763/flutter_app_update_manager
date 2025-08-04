@@ -20,11 +20,11 @@ A powerful Flutter package to easily manage in-app updates using Firebase Firest
 
 | Default Dialog | Modern Dialog |
 |----------------|---------------|
-| ![Default Dialog](Screenshots/default_dialog.png) | ![Modern Dialog](Screenshots/modern_dialog.png) |
+| ![Default Dialog](Screenshots/default.jpeg) | ![Modern Dialog](Screenshots/modern.jpeg) |
 
 | Material Dialog | Custom Dialog |
 |-----------------|---------------|
-| ![Material Dialog](Screenshots/material_dialog.png) | ![Custom Dialog](Screenshots/custom_dialog.png) |
+| ![Material Dialog](Screenshots/material.jpeg) | ![Custom Dialog](Screenshots/custom.jpeg) |
 
 ## Installation
 
@@ -336,9 +336,17 @@ The simplified structure makes version management much easier:
 
 Versions should follow the format: `major.minor.patch+build` (e.g., `1.0.0+1`)
 
-- **Exact matching**: Only shows dialog when version+build number exactly matches your app's version
+- **Flexible matching**: Supports both formats
+  - `1.0.0+1` (with build number) - exact match required
+  - `1.0.0` (without build number) - matches version part only
 - **Force update**: When `forceUpdate: true`, dialog cannot be dismissed
 - **Optional update**: When `forceUpdate: false`, shows "Later" button and dialog is dismissible
+
+**Examples:**
+- App version `0.0.1+1` + Firestore `0.0.1+1` → **Dialog shows**
+- App version `0.0.1+1` + Firestore `0.0.1` → **Dialog shows** (version part matches)
+- App version `0.0.1` + Firestore `0.0.1+1` → **Dialog shows** (version part matches)
+- App version `0.0.1+1` + Firestore `0.0.2` → **No dialog** (no match)
 
 ## Example App
 
